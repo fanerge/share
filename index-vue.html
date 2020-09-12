@@ -1,0 +1,470 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>vue 技巧分享</title>
+
+	<link rel="stylesheet" href="dist/reset.css">
+	<link rel="stylesheet" href="dist/reveal.css">
+	<link rel="stylesheet" href="dist/theme/black.css" id="theme">
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme">
+</head>
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section>
+				<div>让你更了解VUE（业务场景方向）</div>
+				<ul style="font-size: 30px;">
+					<li>hookEvent，内部监听生命周期函数</li>
+					<li>hookEvent，外部监听生命周期函数</li>
+					<li>watch的使用，让组件联动更容易实现</li>
+					<li>如何二次包装组件$attrs 与 $listeners</li>
+					<li>实现前端工程自动化require.context</li>
+					<li>.sync,更优雅的实现数据双向绑定</li>
+					<li>了解Vue合并策略</li>
+					<li>自定义生命周期函数</li>
+					<li>跨越组件的传值（element-ui中时如何使用）</li>
+					<li>content-visibility: 一个可以提高渲染性能的css属性</li>
+				</ul>
+			</section>
+			<section>
+				<div>hookEvent，内部监听生命周期函数</div>
+				<sub>场景：组件跟随浏览器窗口大小，合理调整（响应窗口）</sub>
+				<pre><code><script type="text/template">
+export default {
+	mounted() {
+		this.chart = echarts.init(this.$el)
+		// 请求数据，赋值数据 等等一系列操作...
+		// 监听窗口发生变化，resize组件
+		window.addEventListener('resize', this.$_handleResizeChart)
+	},
+	updated() {
+		// 干了一堆活
+	},
+	created() {
+		// 干了一堆活
+	},
+	beforeDestroy() {
+		// 组件销毁时，销毁监听事件
+		window.removeEventListener('resize', this.$_handleResizeChart)
+	},
+	methods: {
+		$_handleResizeChart() {
+			this.chart.resize()
+		},
+		// 其他一堆方法
+	}
+}
+</script></code></pre>
+			</section>
+
+			<section>
+				<div>hookEvent，内部监听生命周期函数</div>
+				<sub>场景：组件跟随浏览器窗口大小，合理调整（响应窗口）</sub>
+				<pre><code><script type="text/template">
+export default {
+mounted() {
+	this.chart = echarts.init(this.$el)
+	// 请求数据，赋值数据 等等一系列操作...
+	
+	// 监听窗口发生变化，resize组件
+	window.addEventListener('resize', this.$_handleResizeChart)
+	// 通过hook监听组件销毁钩子函数，并取消监听事件
+	this.$once('hook:beforeDestroy', () => {
+		window.removeEventListener('resize', this.$_handleResizeChart)
+	})
+},
+updated() {},
+created() {},
+methods: {
+	$_handleResizeChart() {
+		// this.chart.resize()
+	}
+}
+}
+</script></code></pre>
+			</section>
+
+			<section>
+				<div>hookEvent，外部监听生命周期函数</div>
+				<sub>想在外部监听组件的生命周期函数，如（第三方组件，需要监听第三方组件数据的变化）</sub>
+				<pre><code><script type="text/template">
+<template>
+  <!--通过@hook:updated监听组件的updated生命钩子函数-->
+  <!--组件的所有生命周期钩子都可以通过@hook:钩子函数名 来监听触发-->
+  <custom-select @hook:updated="$_handleSelectUpdated" />
+</template>
+<script>
+import CustomSelect from '../components/custom-select'
+export default {
+  components: {
+    CustomSelect
+  },
+  methods: {
+    $_handleSelectUpdated() {
+      console.log('custom-select组件的updated钩子函数被触发')
+    }
+  }
+}
+</script>
+				</script></code></pre>
+			</section>
+
+
+			<section>
+				<div>watch的使用</div>
+				<sub>场景：让组件联动更容易实现</sub>
+				<pre><code><script type="text/template">
+export default {
+  data() {
+    return {
+      // ...
+    }
+  },
+  computed: {
+    searchParams() {
+      const condition1 = this.condition1;
+      const condition2 = this.condition2;
+      const condition3 = this.condition3;
+      // ... 若干条件，props、data、computed
+
+      return {
+        condition1,
+        condition2,
+        condition3
+        // ...
+      }
+    }
+  },
+  watch: {
+    searchParams: function(newVal, oldVal){
+      // todo
+    }
+  }
+}
+				</script></code></pre>
+			</section>
+
+			<section>
+				<div>随时监听，随时取消，了解一下$watch，</div>
+				<sub></sub>
+				<pre><code><script type="text/template">
+export default {
+  data() {
+    return {
+      formData: {
+        name: '',
+        age: 0
+      }
+    }
+  },
+  created() {
+    this.$_loadData()
+  },
+  methods: {
+    // 模拟异步请求数据
+    $_loadData() {
+        // 先赋值
+        this.formData = {
+          name: '子君',
+          age: 18
+        }
+        // 等表单数据回填之后，监听数据是否发生变化
+        const unwatch = this.$watch(
+          'formData',
+          () => {
+            console.log('数据发生了变化')
+          },
+          {
+            deep: true
+          }
+        )
+        // 模拟数据发生了变化
+        setTimeout(() => {
+          this.formData.name = '张三'
+        }, 1000)
+        // 取消watch
+        unwatch()
+    }
+  }
+}
+							</script></code></pre>
+			</section>
+
+			<section>
+				<div>场景，如何二次包装组件（n多的props、n多的enevts）</div>
+				<img src="img/vue/dialog.png" />
+			</section>
+
+			<section>
+				<div>$attrs 与 $listeners，二次包装组件就靠它了</div>
+				<div style="font-size: 26px;">$attrs:
+					当组件在调用时传入的属性没有在props里面定义时，传入的属性将被绑定到$attrs属性内（class与style除外，他们会挂载到组件最外层元素上）。并可通过v-bind="$attrs"传入到内部组件中
+				</div>
+				<div style="font-size: 26px;">$listeners:
+					当组件被调用时，外部监听的这个组件的所有事件都可以通过$listeners获取到。并可通过v-on="$listeners"传入到内部组件中。
+				</div>
+			</section>
+
+			<section>
+				<div>封装 dialog </div>
+				<pre><code><script type="text/template">
+<!---使用了v-bind与v-on监听属性与事件-->
+<template>
+    <el-dialog :visible.sync="visibleDialog" v-bind="$attrs" v-on="$listeners">
+    <!--定制代码-->
+    </el-dialog>
+</template>
+<script>
+  export default {
+    //默认情况下父作用域的不被认作 props 的 attribute 绑定 (attribute bindings) 
+    //将会“回退”且作为普通的 HTML attribute 应用在子组件的根元素上。
+    //通过设置 inheritAttrs 到 false，这些默认行为将会被去掉
+    inheritAttrs: false
+ }
+</script>
+
+<!---外部使用方式-->
+<custom-dialog :visible.sync="visibleDialog" title="测试弹框" @opened="$_handleOpened">
+	这是一段内容
+</custom-dialog>
+
+							</script></code></pre>
+			</section>
+
+
+			<section>
+				<div>require.context实现前端工程自动化</div>
+				<img src="img/vue/reg-comp1.png" />
+			</section>
+
+
+			<section>
+				<div>require.context实现前端工程自动化</div>
+				<sub
+					style="font-size: 26px;">require.context是一个webpack提供的Api,通过执行require.context函数获取一个特定的上下文,主要是用于实现自动化导入模块。</sub>
+				<img src="img/vue/reg-comp2.png" />
+			</section>
+
+			<section>
+				<div>使用.sync,更优雅的实现数据双向绑定</div>
+				<sub>有时双向绑定还是很好用的</sub>
+				<img src="img/vue/sync1.png" />
+			</section>
+			<section>
+				<div>使用.sync,更优雅的实现数据双向绑定</div>
+				<sub>有时双向绑定还是很好用的</sub>
+				<img src="img/vue/sync2.png" />
+			</section>
+
+			<section>
+				<div>了解Vue合并策略</div>
+				<sub style="font-size: 26px;">在Vue中，提供了一个api, Vue.config.optionMergeStrategies,可以通过这个api去自定义选项的合并策略。</sub>
+				<img src="img/vue/merge.png" />
+				<pre><code><script type="text/template">
+										
+										</script></code></pre>
+			</section>
+
+
+			<section>
+				<div>通过合并策略自定义生命周期函数</div>
+				<sub
+					style="font-size: 26px;">场景：假如页面有许多定时器，ajax轮询还有动画，如果这种页面开多了，浏览器就变得卡了，这时候我就想如果能在用户切换页签时候将这些都停掉，切回时在重新运行。基础实现</sub>
+				<pre><code><script type="text/template">
+export default {
+  created() {
+    window.addEventListener('visibilitychange', this.$_hanldeVisiblityChange)
+    // 此处用了hookEvent，可以参考小编前一篇文章
+    this.$on('hook:beforeDestroy', () => {
+      window.removeEventListener(
+        'visibilitychange',
+        this.$_hanldeVisiblityChange
+      )
+    })
+  },
+  methods: {
+    $_hanldeVisiblityChange() {
+      if (document.visibilityState === 'hidden') {
+        // 停掉那一堆东西
+      }
+      if (document.visibilityState === 'visible') {
+        // 开启那一堆东西
+      }
+    }
+  }
+}				
+				</script></code></pre>
+			</section>
+
+
+
+
+			<section>
+				<div>通过合并策略自定义生命周期函数</div>
+				<sub style="font-size: 26px; line-height: 30px;">刚刚的实现太繁琐了，组件有没有类似pageHidden 与
+					pageVisible这样生命周期可以用呢？好吧，没有我们就自己实现吧。</sub>
+				<pre><code><script type="text/template">
+import Vue from 'vue'
+
+// 递归通知所有组件页面状态发生了变化
+const notifyVisibilityChange = (lifeCycleName, vm) => {
+  // vm会存在$options中，通过$options[lifeCycleName]获取生命周期
+  const lifeCycles = vm.$options[lifeCycleName]
+  // 因为使用了created的合并策略，所以是一个数组
+  if (lifeCycles && lifeCycles.length) {
+    // 遍历 lifeCycleName对应的生命周期函数列表，依次执行
+    lifeCycles.forEach(lifecycle => {
+      lifecycle.call(vm)
+    })
+  }
+  // 遍历所有的子组件，然后依次递归执行
+  if (vm.$children && vm.$children.length) {
+    vm.$children.forEach(child => {
+      notifyVisibilityChange(lifeCycleName, child)
+    })
+  }
+}
+
+/**
+ * 添加生命周期钩子函数
+ * @param {*} rootVm vue 根实例，在页面显示隐藏时候，通过root向下通知
+ */
+export function init() {
+  const optionMergeStrategies = Vue.config.optionMergeStrategies
+  /*
+    定义了两个生命周期函数 pageVisible, pageHidden
+    为什么要赋值为 optionMergeStrategies.created呢
+    这个相当于指定 pageVisible, pageHidden 的合并策略与 created的相同（其他生命周期函数都一样）
+   */
+  optionMergeStrategies.pageVisible = optionMergeStrategies.beforeCreate
+  optionMergeStrategies.pageHidden = optionMergeStrategies.created
+}
+
+/**
+ * 将事件变化绑定到根节点上面
+ * @param {*} rootVm
+ */
+export function bind(rootVm) {
+  window.addEventListener('visibilitychange', () => {
+    // 判断调用哪个生命周期函数
+    let lifeCycleName = undefined
+    if (document.visibilityState === 'hidden') {
+      lifeCycleName = 'pageHidden'
+    } else if (document.visibilityState === 'visible') {
+      lifeCycleName = 'pageVisible'
+    }
+    if (lifeCycleName) {
+      // 通过所有组件生命周期发生变化了
+      notifyVisibilityChange(lifeCycleName, rootVm)
+    }
+  })
+}
+</script></code></pre>
+			</section>
+
+			<section>
+				<div>如何使用我们的生命周期</div>
+				<pre><code><script type="text/template">
+// 在main.js主入口文件引入
+import { init, bind } from './utils/custom-life-cycle'
+
+// 初始化生命周期函数, 必须在Vue实例化之前确定合并策略
+init()
+
+const vm = new Vue({
+  router,
+  render: h => h(App)
+}).$mount('#app')
+
+// 将rootVm 绑定到生命周期函数监听里面
+bind(vm)
+
+
+// 在需要的地方监听生命周期函数（组件中）
+export default {
+	mounted() {
+		// todo
+	},
+  pageVisible() {
+    console.log('页面显示出来了')
+  },
+  pageHidden() {
+    console.log('页面隐藏了')
+  }
+}
+									
+				</script></code></pre>
+			</section>
+
+			<section>
+				<div>provide 与 inject，跨越组件的传值，React/Context</div>
+				<sub>el-form上面我们指定了一个属性size="small"，然后有没有发现表单里面的所有表单元素以及按钮的 size都变成了small,这个是怎么做到的？</sub>
+			</section>
+
+			<section>
+				<div>provide 与 inject，跨越组件的传值，React/Context</div>
+				<sub>ElForm组件</sub>
+				<img src="img/vue/form-1.png" />
+			</section>
+
+			<section>
+				<div>provide 与 inject，跨越组件的传值，React/Context</div>
+				<sub>ElFormItem组件</sub>
+				<img src="img/vue/form-2.png" />
+			</section>
+
+			<section>
+				<div>provide 与 inject，跨越组件的传值，React/Context</div>
+				<sub>ElButton组件</sub>
+				<img src="img/vue/form-3.png" />
+			</section>
+
+
+			<section>
+				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
+				<video preload="none"
+					data-src="https://cloud.video.taobao.com/play/u/104645/p/1/d/hd/e/6/t/1/275956196865.mp4?auth_key=YXBwX2tleT04MDAwMDAwMTImYXV0aF9pbmZvPXsidGltZXN0YW1wRW5jcnlwdGVkIjoiODBlNzM4MTA1Y2UzOTQ1NjM5ZmJiNWQ5ZjNiMDhmYjEifSZkdXJhdGlvbj0mdGltZXN0YW1wPTE1OTk4ODk5NDc="
+					webkit-playsinline="webkit-playsinline" playsinline="playsinline" class="lozad"
+					poster="https://img.alicdn.com/imgextra/i2/6000000001259/O1CN01vg8W8M1LAfGT4UczD_!!6000000001259-0-tbvideo.jpg"
+					controls="" controlslist="nodownload"
+					src="https://cloud.video.taobao.com/play/u/104645/p/1/d/hd/e/6/t/1/275956196865.mp4?auth_key=YXBwX2tleT04MDAwMDAwMTImYXV0aF9pbmZvPXsidGltZXN0YW1wRW5jcnlwdGVkIjoiODBlNzM4MTA1Y2UzOTQ1NjM5ZmJiNWQ5ZjNiMDhmYjEifSZkdXJhdGlvbj0mdGltZXN0YW1wPTE1OTk4ODk5NDc="
+					data-loaded="true"></video>
+			</section>
+
+			<section>
+				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
+				<img src="img/vue/content-visibility.jpg" />
+			</section>
+
+			<section>
+				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
+				<div style="font-size: 26px;">因为content-visibility通过跳过屏幕外的内容渲染来缩短初始加载时间</div>
+				<div style="font-size: 26px;">contain-intrinsic-size指定元素的自然大小，避免滚动条的大小会发生变化带来的抖动感</div>
+				<a target="_blank" href="https://web.dev/content-visibility/">google</a>
+			</section>
+
+		</div>
+	</div>
+
+	<script src="dist/reveal.js"></script>
+	<script src="plugin/notes/notes.js"></script>
+	<script src="plugin/markdown/markdown.js"></script>
+	<script src="plugin/highlight/highlight.js"></script>
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+</html>
