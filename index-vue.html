@@ -29,6 +29,7 @@
 					<li>自定义生命周期函数</li>
 					<li>跨越组件的传值（element-ui中时如何使用）</li>
 					<li>content-visibility: 一个可以提高渲染性能的css属性</li>
+					<li>对CJK复合语言输入优化</li>
 				</ul>
 			</section>
 			<section>
@@ -446,6 +447,49 @@ export default {
 				<div style="font-size: 26px;">因为content-visibility通过跳过屏幕外的内容渲染来缩短初始加载时间</div>
 				<div style="font-size: 26px;">contain-intrinsic-size指定元素的自然大小，避免滚动条的大小会发生变化带来的抖动感</div>
 				<a target="_blank" href="https://web.dev/content-visibility/">google</a>
+			</section>
+
+			<section>
+				<div class="title">Input 输入框的优化对CJK语言/element-ui</div>
+				<section>
+					<img src="./img/vue/intpu-1.png" />
+				</section>
+				<section>
+					<img src="./img/vue/input-2.png" />
+				</section>
+				<section>
+					<img src="./img/vue/input-gif" />
+					<a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/compositionstart_event"
+						target="_blank">MDN/demo</a>
+				</section>
+				<section>
+					<div class="content">compositionstart > compositionupdate > input > compositionend</div>
+					<div class="content">
+						这些可见字符的输入可能需要一连串的键盘操作、语音识别或者点击输入法的备选词
+					</div>
+					<div class="content">
+						<pre><code><script type="text/template">
+// 解决思路
+let iscomposing = true;
+$('input').on('input', function(e){
+	if(iscomposing) {
+		// todo
+		inputDoing()
+	}
+})
+$('input').on('compositionstart', function(e){
+	// 这里就阻止 input 在中文没选择时就执行
+	iscomposing = false;
+})
+$('input').on('compositionend', function(e){
+	// 如果输入非CJK文字，则不存在该问题，需重置为true
+	iscomposing = true;
+	// CJK被阻止了，所以这里要执行一次
+	inputDoing()
+})
+					</script></code></pre>
+					</div>
+				</section>
 			</section>
 
 			<section>

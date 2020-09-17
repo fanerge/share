@@ -1,0 +1,387 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>HTTP2/HPACK技术分享</title>
+
+	<link rel="stylesheet" href="dist/reset.css">
+	<link rel="stylesheet" href="dist/reveal.css">
+	<link rel="stylesheet" href="dist/theme/black.css" id="theme">
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme">
+</head>
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section>
+				<h4>HTTP/2 头部压缩技术 <sub>HPACK</sub></h4>
+			</section>
+			<section>
+				<h4>起因</h4>
+				<ul>
+					<li>前段时间对接集团安全部门
+						SDK（sparta），前端需求：需要在请求中携带相关的信息，我采用了将信息放于请求体中（但我要说服大家，不会浪费带宽，因为我们网站采用HTTP2协议，用HPACK技术，我就必须要搞清楚HPACK技术的原理）
+					</li>
+					<li>现代前端越来越复杂，一个页面多则上百个请求，越来越多的请求导致消耗在头部的流量越来越多，尤其是每次都要传输 UserAgent、Cookie 这类不会频繁变动的内容，完全是一种浪费。</li>
+				</ul>
+			</section>
+			<section>
+				<h4>Wireshark 抓包验证</h4>
+				<img src="./img/hpack/x-sparta-data.png" />
+			</section>
+			<section>
+				<h4>HTTP1.x 和 HTTP2 报文对比 GET</h4>
+				<pre>
+						<code>
+	// HTTP1.1
+	GET /resource HTTP/1.1     
+	Host: example.org        
+	Accept: image/jpeg             
+	
+	// HTTP2
+	HEADERS
+	 + END_STREAM
+	 + END_HEADERS
+		 :method = GET
+		 :scheme = https
+		 :path = /resource
+		 host = example.org
+		 accept = image/jpeg
+						</code>
+						</pre>
+			</section>
+			<section>
+				<h4>HTTP1.x 和 HTTP2 报文对比 POST</h4>
+				<pre>
+						<code>
+// HTTP1.1
+POST /resource HTTP/1.1      
+Host: example.org          
+Content-Type: image/jpeg     
+Content-Length: 123                  
+																			
+{binary data}                        
+						 
+// HTTP2
+HEADERS
+	:method = POST
+	:path = /resource
+	:scheme = https
+CONTINUATION
+		END_HEADERS
+		content-type = image/jpeg
+		host = example.org
+		content-length = 123
+DATA
+		END_STREAM
+	{binary data}
+						</code>
+						</pre>
+			</section>
+			<section>
+				<h4></h4>
+				<div>HTTP/1.x使用消息起始行( [RFC7230]，3.1节 )表达目标URI。对于同样的目的，HTTP/2使用以':'字符(ASCII 0x3a)开始的特殊的伪首部字段来表示请求的方法和响应的状态码。
+					Pseudo-Header Fields / 伪首部字段</div>
+			</section>
+			<section>
+				<h4>HPACK 原理</h4>
+				<ul>
+					<li>维护一份<a href="https://httpwg.org/specs/rfc7541.html#static.table.definition" target="_blank">静态字典（Static
+							Table）</a>，包含常见的头部名称，以及特别常见的头部名称与值的组合；</li>
+					<li>维护一份相同的动态字典（Dynamic Table），可以动态地添加内容；（作用域为同一个连接）</li>
+					<li>支持基于<a href="https://httpwg.org/specs/rfc7541.html#huffman.code" target="_blank">静态哈夫曼码表</a>的哈夫曼编码（Huffman
+						Coding）；</li>
+				</ul>
+				<pre>
+<----------  Index Address Space ---------->
+<-- Static  Table -->  <-- Dynamic Table -->
++---+-----------+---+  +---+-----------+---+
+| 1 |    ...    | s |  |s+1|    ...    |s+k|
++---+-----------+---+  +---+-----------+---+
+					</pre>
+			</section>
+			<section>
+				<h4>静态字典（Static Table）</h4>
+				<section>
+					<h6>对于完全匹配的头部键值对</h6>
+					<pre>
+例如 :method: GET，可以直接使用一个字符表示；
+index 2	:method	GET
+小知识点：HTTP/1 的状态行信息（Method、Path、Status 等），
+在 HTTP/2 中被拆成键值对放入头部（冒号开头的那些），同样可以享受到字典和哈夫曼压缩。
+举个🌰
+index 4	:path	/
+						</pre>
+				</section>
+				<section>
+					<h6>整个头部键值对都在字典中（如，:method GET）</h6>
+					<div>
+						<pre>
+0   1   2   3   4   5   6   7
++---+---+---+---+---+---+---+---+
+| 1 |        Index (7+)         |
++---+---------------------------+
+							</pre>
+						这是最简单的情况，使用一个字节就可以表示这个头部了，最左一位固定为 1，之后七位存放键值对在静态或动态字典中的索引。
+						例如下图中，头部索引值为 2（0000010），在静态字典中查询可得 :method: GET。
+					</div>
+				</section>
+				<section>
+					<img src="./img/hpack/eg1.webp" />
+				</section>
+				<section>
+					<h6>对于头部名称可以匹配的键值对</h6>
+					<pre>
+例如 cookie: xxxxxxx，可以将名称使用一个字符表示。
+index 32	cookie
+你可能会问key压缩了，value呢？这就是后面的 Dynamic Table 和 Huffman Coding 要做的了。
+同时，浏览器可以告知服务端，将 cookie: xxxxxxx 添加到动态字典中，
+这样后续整个键值对就可以使用一个字符表示了。
+类似的，服务端也可以更新对方的动态字典。
+需要注意的是，动态字典上下文有关，需要为每个 HTTP/2 连接维护不同的字典。
+						</pre>
+				</section>
+				<section>
+					<h6>Nginx的静态表</h6>
+					<pre>
+							<code>
+static ngx_http_v2_header_t  ngx_http_v2_static_table[] = {
+	{ ngx_string(":authority"), ngx_string("") },
+	{ ngx_string(":method"), ngx_string("GET") },
+	{ ngx_string(":method"), ngx_string("POST") },
+	{ ngx_string(":path"), ngx_string("/") },
+	{ ngx_string(":path"), ngx_string("/index.html") },
+	{ ngx_string(":scheme"), ngx_string("http") },
+	{ ngx_string(":scheme"), ngx_string("https") },
+	{ ngx_string(":status"), ngx_string("200") },
+	{ ngx_string(":status"), ngx_string("204") },
+	{ ngx_string(":status"), ngx_string("206") },
+	{ ngx_string(":status"), ngx_string("304") },
+	{ ngx_string(":status"), ngx_string("400") },
+	{ ngx_string(":status"), ngx_string("404") },
+	{ ngx_string(":status"), ngx_string("500") },
+	{ ngx_string("accept-charset"), ngx_string("") },
+	{ ngx_string("accept-encoding"), ngx_string("gzip, deflate") },
+	{ ngx_string("accept-language"), ngx_string("") },
+	{ ngx_string("accept-ranges"), ngx_string("") },
+	{ ngx_string("accept"), ngx_string("") },
+	{ ngx_string("access-control-allow-origin"), ngx_string("") },
+	{ ngx_string("age"), ngx_string("") },
+	{ ngx_string("allow"), ngx_string("") },
+	{ ngx_string("authorization"), ngx_string("") },
+	{ ngx_string("cache-control"), ngx_string("") },
+	{ ngx_string("content-disposition"), ngx_string("") },
+	{ ngx_string("content-encoding"), ngx_string("") },
+	{ ngx_string("content-language"), ngx_string("") },
+	{ ngx_string("content-length"), ngx_string("") },
+	{ ngx_string("content-location"), ngx_string("") },
+	{ ngx_string("content-range"), ngx_string("") },
+	{ ngx_string("content-type"), ngx_string("") },
+	{ ngx_string("cookie"), ngx_string("") },
+	{ ngx_string("date"), ngx_string("") },
+	{ ngx_string("etag"), ngx_string("") },
+	{ ngx_string("expect"), ngx_string("") },
+	{ ngx_string("expires"), ngx_string("") },
+	{ ngx_string("from"), ngx_string("") },
+	{ ngx_string("host"), ngx_string("") },
+	{ ngx_string("if-match"), ngx_string("") },
+	{ ngx_string("if-modified-since"), ngx_string("") },
+	{ ngx_string("if-none-match"), ngx_string("") },
+	{ ngx_string("if-range"), ngx_string("") },
+	{ ngx_string("if-unmodified-since"), ngx_string("") },
+	{ ngx_string("last-modified"), ngx_string("") },
+	{ ngx_string("link"), ngx_string("") },
+	{ ngx_string("location"), ngx_string("") },
+	{ ngx_string("max-forwards"), ngx_string("") },
+	{ ngx_string("proxy-authenticate"), ngx_string("") },
+	{ ngx_string("proxy-authorization"), ngx_string("") },
+	{ ngx_string("range"), ngx_string("") },
+	{ ngx_string("referer"), ngx_string("") },
+	{ ngx_string("refresh"), ngx_string("") },
+	{ ngx_string("retry-after"), ngx_string("") },
+	{ ngx_string("server"), ngx_string("") },
+	{ ngx_string("set-cookie"), ngx_string("") },
+	{ ngx_string("strict-transport-security"), ngx_string("") },
+	{ ngx_string("transfer-encoding"), ngx_string("") },
+	{ ngx_string("user-agent"), ngx_string("") },
+	{ ngx_string("vary"), ngx_string("") },
+	{ ngx_string("via"), ngx_string("") },
+	{ ngx_string("www-authenticate"), ngx_string("") },
+};
+</code>
+						</pre>
+				</section>
+			</section>
+			<section>
+				<h4>动态字典（Dynamic Table）</h4>
+				<section>
+					对于同一个连接，客户端和服务端维护同一个动态表。
+					http2 多路复用，同一个连接可以同时发送多个请求，通过不同stream来实现区分不同请求。
+				</section>
+				<section>
+					<h6>头部名称在字典中，更新动态字典</h6>
+					<pre>
+0   1   2   3   4   5   6   7
++---+---+---+---+---+---+---+---+
+| 0 | 1 |      Index (6+)       |
++---+---+-----------------------+
+| H |     Value Length (7+)     |
++---+---------------------------+
+| Value String (Length octets)  |
++-------------------------------+
+						</pre>
+					<pre>
+对于这种情况，首先需要使用一个字节表示头部名称：
+左两位固定为 01，之后六位存放头部名称在静态或动态字典中的索引。
+接下来的一个字节第一位 H 表示头部值是否使用了哈夫曼编码，
+剩余七位表示头部值的长度 L，后续 L 个字节就是头部值的具体内容了。
+例如索引值为 32（100000），在静态字典中查询可得 cookie；头部值使用了哈夫曼编码（1），长度是 28（0011100）；
+接下来的 28 个字节是 cookie 的值，将其进行哈夫曼解码就能得到具体内容。</pre>
+				</section>
+				<section>
+					<img src="./img/hpack/eg2.webp" />
+				</section>
+				<section>
+					<h6>头部名称不在字典中，更新动态字典</h6>
+					<pre>
+0   1   2   3   4   5   6   7
++---+---+---+---+---+---+---+---+
+| 0 | 1 |           0           |
++---+---+-----------------------+
+| H |     Name Length (7+)      |
++---+---------------------------+
+|  Name String (Length octets)  |
++---+---------------------------+
+| H |     Value Length (7+)     |
++---+---------------------------+
+| Value String (Length octets)  |
++-------------------------------+
+这种情况与第 2 种情况类似，只是由于头部名称不在字典中，所以第一个字节固定为 01000000；
+接着申明名称是否使用哈夫曼编码及长度，并放上名称的具体内容；
+再申明值是否使用哈夫曼编码及长度，最后放上值的具体内容。
+例如下图中名称的长度是 5（0000101），值的长度是 6（0000110）。
+对其具体内容进行哈夫曼解码后，可得 pragma: no-cache。
+客户端或服务端看到这种格式的头部键值对，会将其添加到自己的动态字典中。
+后续传输这样的内容，就符合第 1 种情况了。
+						</pre>
+				</section>
+				<section>
+					<img src="./img/hpack/eg3.webp" />
+				</section>
+			</section>
+			<section>
+				<h4>哈夫曼编码（Huffman Coding）</h4>
+				<pre>
+支持基于静态哈夫曼码表的哈夫曼编码（Huffman Coding）
+使用字典可以极大地提升压缩效果，其中静态字典在首次请求中就可以使用。
+对于静态、动态字典中不存在的内容，还可以使用哈夫曼编码来减小体积。
+HTTP/2 使用了一份静态哈夫曼码表，也需要内置在客户端和服务端之中。
+这个哈夫曼代码是根据大量HTTP头文件获得的统计信息生成的。
+					</pre>
+			</section>
+			<section>
+				<img src="./img/hpack/google.webp" />
+				<div style="font-size: 20px;">HPACK压缩上下文由静态和动态表组成：静态表在规范中定义，并提供所有连接可能使用的常见HTTP头字段的列表（例如，有效头名称）;
+					动态表最初是空的，并基于特定连接内的交换值进行更新。
+					因此，通过对以前未见过的值使用静态霍夫曼编码，并将索引替换为已存在于客户端和服务端静态或动态表中的值的索引，可以减少每个请求的大小。</div>
+			</section>
+			<section>
+				<h4>加餐？如何抓包并解密HTTPS报文</h4>
+				<ul>
+					<li>设置系统变量：SSLKEYLOGFILE，指向一个存放密钥的文件</li>
+					<li>配置抓包工具：Protocols -> TLS，指向刚刚的密钥文件</li>
+					<li>关闭所有chrome浏览器、Wireshark的进程</li>
+					<li>open /Applications/Wireshark.app</li>
+					<li>open /Applications/Google\ Chrome.app</li>
+				</ul>
+				<a href="https://wiki.wireshark.org/TLS#Using_the_.28Pre.29-Master-Secret" target="_blank"></a>
+			</section>
+			<section>
+				<h4>本分享涉及到的其他知识</h4>
+				<section>
+					<img src="./img/hpack/multiperoad.png" height="60%" />
+				</section>
+				<section>
+					<ul>
+						<li>推送流的priority与先前客户端发起的请求有关(形成优先级二叉树)</li>
+						<li>客户端可以要求关闭服务端推送功能，SETTINGS_ENABLE_PUSH 设置为 0</li>
+						<li>服务端采可以发送 PUSH_PROMISE 帧推送资源。</li>
+					</ul>
+					<pre><span>举个🌰吧</span>
+如果服务端收到了一个对文档的请求，该文档包含内嵌的指向多个图片文件的链接，
+且服务端选择向客户端推送那些额外的图片，
+那么在发送包含图片链接的 DATA 帧之前发送 PUSH_PROMISE 帧可以确保客户端在发现内嵌的链接之前，
+能够知道有一个资源将要被推送过来。
+						</pre>
+				</section>
+				<section>
+					<h6>HTTP2中Frame的作用</h6>
+					<ul>
+						<li>DATA帧(type=0x0)用于携带HTTP请求或响应的载荷。</li>
+						<li>HEADERS 帧(type=0x1)用来首部块片段。</li>
+						<li>PRIORITY 帧(type=0x2)指定了发送者建议的流优先级。</li>
+						<li>RST_STREAM 帧(type=0x3)可以立即终结一个流。</li>
+						<li>SETTINGS 帧(type=0x4)用来传送影响两端通信的配置参数。</li>
+					</ul>
+				</section>
+				<section>
+					<h6>HTTP2中Frame的作用</h6>
+					<ul>
+						<li>PUSH_PROMISE 帧（type = 0x5）用于在发送者打算启动的流之前通知对端。</li>
+						<li>PING 帧(type=0x6)判断一个空闲的连接可用，发送端测量最小往返时间(RTT)的一种机制。</li>
+						<li>GOAWAY 帧(type=0x7)用于发起关闭连接，或者警示严重错误。</li>
+						<li>WINDOW_UPDATE 帧(type=0x8)用于执行流量控制功能；</li>
+						<li>CONTINUATION 帧(type=0x9)用于继续传送首部块片段序列( 4.3 节 )。</li>
+					</ul>
+				</section>
+				<section>
+					<h6>settings Frame</h6>
+					<ul style="font-size: 20px;">
+						<li>SETTINGS_HEADER_TABLE_SIZE (0x1): 允许发送方通知远端用于解码首部块的首部压缩表的最大字节值。其初始值是4096字节。</li>
+						<li>SETTINGS_ENABLE_PUSH (0x2): 该设置用于关闭服务端推送( 8.2节 )。如果一端收到了该参数值为0，该端点不能发送 PUSH_PROMISE 帧。</li>
+						<li>SETTINGS_MAX_CONCURRENT_STREAMS (0x3): 指明发送端允许的最大并发流数。该值是有方向性的：它适用于发送端允许接收端创建的流数目。</li>
+						<li>SETTINGS_INITIAL_WINDOW_SIZE (0x4): 指明发送端流级别的流量控制窗口的初始字节大小。该初始值是2^16 - 1 (65,535)字节。</li>
+						<li>SETTINGS_MAX_FRAME_SIZE (0x5): 指明发送端希望接收的最大帧负载的字节值。初始值是2^14 (16,384)字节。</li>
+						<li>SETTINGS_MAX_HEADER_LIST_SIZE (0x6): 该建议设置通知对端发送端准备接收的首部列表大小的最大字节值。</li>
+					</ul>
+				</section>
+			</section>
+			<section>
+				<h4>参考文章</h4>
+				<ul>
+					<li><a href="https://httpwg.org/specs/rfc7540.html">HTTP2协议规范</a></li>
+					<li><a href="https://httpwg.org/specs/rfc7541.html">HTTP2/HPACK协议规范</a></li>
+					<li><a href="https://httpwg.org/specs/rfc7541.html#static.table.definition">静态编码表</a></li>
+					<li><a href="https://httpwg.org/specs/rfc7541.html#huffman.code">静态哈夫曼编码表</a></li>
+					<li><a href="https://github.com/molnarg/node-http2">查看client端 Static Table（node版）</a></li>
+					<li><a href="https://wiki.wireshark.org/TLS#Using_the_.28Pre.29-Master-Secret">wiki 解密 TLS</a></li>
+					<li><a href="https://imququ.com/post/http2-traffic-in-wireshark.html">Wireshark 如何解密 HTTPS包（Jerry Qu大神）</a>
+					</li>
+				</ul>
+			</section>
+			<section>
+				<h4>thanks</h4>
+			</section>
+		</div>
+	</div>
+
+	<script src="dist/reveal.js"></script>
+	<script src="plugin/notes/notes.js"></script>
+	<script src="plugin/markdown/markdown.js"></script>
+	<script src="plugin/highlight/highlight.js"></script>
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+</html>
