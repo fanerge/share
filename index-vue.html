@@ -28,8 +28,8 @@
 					<li>了解Vue合并策略</li>
 					<li>自定义生命周期函数</li>
 					<li>跨越组件的传值（element-ui中时如何使用）</li>
-					<li>content-visibility: 一个可以提高渲染性能的css属性</li>
 					<li>对CJK复合语言输入优化</li>
+					<li>content-visibility: 一个可以提高渲染性能的css属性</li>
 				</ul>
 			</section>
 			<section>
@@ -194,6 +194,11 @@ export default {
   }
 }
 							</script></code></pre>
+			</section>
+
+			<section>
+				<div>VUE3 侦听多个数据源</div>
+				<img src="img/vue/watch-v3.png" />
 			</section>
 
 			<section>
@@ -433,6 +438,18 @@ export default {
 				<img src="img/vue/form-3.png" />
 			</section>
 
+			<section>
+				<div>VUE3 中provide 与 inject</div>
+				<sub>如何使用</sub>
+				<img src="img/vue/provide-v3.png" />
+			</section>
+
+			<section>
+				<div>VUE3 中provide 与 inject</div>
+				<sub>让注入的数据是响应性</sub>
+				<img src="img/vue/provide-v31.png" />
+			</section>
+
 
 			<section>
 				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
@@ -451,18 +468,19 @@ export default {
 			</section>
 
 			<section>
-				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
-				<div style="font-size: 26px;">因为content-visibility通过跳过屏幕外的内容渲染来缩短初始加载时间</div>
-				<div style="font-size: 26px;">contain-intrinsic-size指定元素的自然大小，避免滚动条的大小会发生变化带来的抖动感</div>
-				<a target="_blank" href="https://web.dev/content-visibility/">google</a>
-			</section>
-
-			<section>
 				<div class="title">Input 输入框的优化对CJK语言/element-ui</div>
 				<section>
 					<img src="./img/vue/input-gif" />
 					<a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/compositionstart_event"
 						target="_blank">MDN/demo</a>
+					<a href="https://developer.mozilla.org/zh-CN/docs/Web/API/CompositionEvent"
+						target="_blank">CompositionEvent</a>
+				</section>
+				<section>
+					<div style="font-size: 20px;">DOM 接口 CompositionEvent 表示用户间接输入文本（如使用输入法）时发生的事件。此接口的常用事件有compositionstart,
+						compositionupdate 和 compositionend</div>
+					<a href="https://developer.mozilla.org/zh-CN/docs/Web/API/CompositionEvent"
+						target="_blank">CompositionEvent</a>
 				</section>
 				<section>
 					<div class="content">compositionstart > compositionupdate > input > compositionend</div>
@@ -471,25 +489,25 @@ export default {
 					</div>
 					<div class="content">
 						<pre><code><script type="text/template">
-// 解决思路
-let iscomposing = true;
-$('input').on('input', function(e){
-	if(iscomposing) {
-		// todo
-		inputDoing()
-	}
-})
-$('input').on('compositionstart', function(e){
-	// 这里就阻止 input 在中文没选择时就执行
-	iscomposing = false;
-})
-$('input').on('compositionend', function(e){
-	// 如果输入非CJK文字，则不存在该问题，需重置为true
-	iscomposing = true;
-	// CJK被阻止了，所以这里要执行一次
-	inputDoing()
-})
-					</script></code></pre>
+			// 解决思路
+			let iscomposing = true;
+			$('input').on('input', function(e){
+				if(iscomposing) {
+					// todo
+					inputDoing()
+				}
+			})
+			$('input').on('compositionstart', function(e){
+				// 这里就阻止 input 在中文没选择时就执行
+				iscomposing = false;
+			})
+			$('input').on('compositionend', function(e){
+				// 如果输入非CJK文字，则不存在该问题，需重置为true
+				iscomposing = true;
+				// CJK被阻止了，所以这里要执行一次
+				inputDoing()
+			})
+								</script></code></pre>
 					</div>
 				</section>
 				<section>
@@ -498,6 +516,13 @@ $('input').on('compositionend', function(e){
 				<section>
 					<img src="./img/vue/input-2.png" />
 				</section>
+			</section>
+
+			<section>
+				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
+				<div style="font-size: 26px;">因为content-visibility通过跳过屏幕外的内容渲染来缩短初始加载时间</div>
+				<div style="font-size: 26px;">contain-intrinsic-size指定元素的自然大小，避免滚动条的大小会发生变化带来的抖动感</div>
+				<a target="_blank" href="https://web.dev/content-visibility/">google</a>
 			</section>
 
 			<section>
