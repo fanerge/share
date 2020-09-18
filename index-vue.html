@@ -151,7 +151,7 @@ export default {
 			</section>
 
 			<section>
-				<div>随时监听，随时取消，了解一下$watch，</div>
+				<div>随时监听，随时取消，了解一下$watch</div>
 				<sub></sub>
 				<pre><code><script type="text/template">
 export default {
@@ -198,12 +198,14 @@ export default {
 
 			<section>
 				<div>VUE3 侦听多个数据源</div>
-				<img src="img/vue/watch-v3.png" />
+				<a target="_blank" href="img/vue/watch-v3.png"><img src="img/vue/watch-v3.png" /></a>
 			</section>
 
 			<section>
 				<div>场景，如何二次包装组件（n多的props、n多的enevts）</div>
-				<img src="img/vue/dialog.png" />
+				<a target="_blank" href="img/vue/dialog.png">
+					<img src="img/vue/dialog.png" />
+				</a>
 			</section>
 
 			<section>
@@ -245,7 +247,7 @@ export default {
 
 			<section>
 				<div>require.context实现前端工程自动化</div>
-				<img src="img/vue/reg-comp1.png" />
+				<a target="_blank" href="img/vue/reg-comp1.png"><img src="img/vue/reg-comp1.png" /></a>
 			</section>
 
 
@@ -253,35 +255,33 @@ export default {
 				<div>require.context实现前端工程自动化</div>
 				<sub
 					style="font-size: 26px;">require.context是一个webpack提供的Api,通过执行require.context函数获取一个特定的上下文,主要是用于实现自动化导入模块。</sub>
-				<img src="img/vue/reg-comp2.png" />
+				<a target="_blank" href="img/vue/reg-comp2.png"><img src="img/vue/reg-comp2.png" /></a>
+
 			</section>
 
 			<section>
 				<div>使用.sync,更优雅的实现数据双向绑定</div>
 				<sub>有时双向绑定还是很好用的</sub>
-				<img src="img/vue/sync1.png" />
+				<a target="_blank" href="img/vue/sync1.png"><img src="img/vue/sync1.png" /></a>
 			</section>
 			<section>
 				<div>使用.sync,更优雅的实现数据双向绑定</div>
 				<sub>有时双向绑定还是很好用的</sub>
-				<img src="img/vue/sync2.png" />
+				<a target="_blank" href="img/vue/sync2.png"><img src="img/vue/sync2.png" /></a>
 			</section>
 			<section>
 				<div>在Vue3.0中为了实现统一，实现了让一个组件可以拥有多个v-model，同时删除掉了.sync。</div>
-				<img src="img/vue/model-1.png" />
+				<a target="_blank" href="img/vue/model-1.png"><img src="img/vue/model-1.png" /></a>
 			</section>
 			<section>
 				<div>在Vue3.0中为了实现统一，实现了让一个组件可以拥有多个v-model，同时删除掉了.sync。</div>
-				<img src="img/vue/model-2.png" />
+				<a target="_blank" href="img/vue/model-2.png"><img src="img/vue/model-2.png" /></a>
 			</section>
 
 			<section>
 				<div>了解Vue合并策略</div>
 				<sub style="font-size: 26px;">在Vue中，提供了一个api, Vue.config.optionMergeStrategies,可以通过这个api去自定义选项的合并策略。</sub>
-				<img src="img/vue/merge.png" />
-				<pre><code><script type="text/template">
-										
-										</script></code></pre>
+				<a target="_blank" href="img/vue/merge.png"><img src="img/vue/merge.png" /></a>
 			</section>
 
 
@@ -423,31 +423,31 @@ export default {
 			<section>
 				<div>provide 与 inject，跨越组件的传值，React/Context</div>
 				<sub>ElForm组件</sub>
-				<img src="img/vue/form-1.png" />
+				<a target="_blank" href="img/vue/form-1.png"><img src="img/vue/form-1.png" /></a>
 			</section>
 
 			<section>
 				<div>provide 与 inject，跨越组件的传值，React/Context</div>
 				<sub>ElFormItem组件</sub>
-				<img src="img/vue/form-2.png" />
+				<a target="_blank" href="img/vue/form-2.png"><img src="img/vue/form-2.png" /></a>
 			</section>
 
 			<section>
 				<div>provide 与 inject，跨越组件的传值，React/Context</div>
 				<sub>ElButton组件</sub>
-				<img src="img/vue/form-3.png" />
+				<a target="_blank" href="img/vue/form-3.png"><img src="img/vue/form-3.png" /></a>
 			</section>
 
 			<section>
 				<div>VUE3 中provide 与 inject</div>
 				<sub>如何使用</sub>
-				<img src="img/vue/provide-v3.png" />
+				<a target="_blank" href="img/vue/provide-v3.png"><img src="img/vue/provide-v3.png" /></a>
 			</section>
 
 			<section>
 				<div>VUE3 中provide 与 inject</div>
 				<sub>让注入的数据是响应性</sub>
-				<img src="img/vue/provide-v31.png" />
+				<a target="_blank" href="img/vue/provide-v31.png"><img src="img/vue/provide-v31.png" /></a>
 			</section>
 
 
@@ -464,7 +464,7 @@ export default {
 
 			<section>
 				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
-				<img src="img/vue/content-visibility.jpg" />
+				<a target="_blank" href="img/vue/content-visibility.jpg"><img src="img/vue/content-visibility.jpg" /></a>
 			</section>
 
 			<section>
@@ -489,32 +489,32 @@ export default {
 					</div>
 					<div class="content">
 						<pre><code><script type="text/template">
-			// 解决思路
-			let iscomposing = true;
-			$('input').on('input', function(e){
-				if(iscomposing) {
-					// todo
-					inputDoing()
-				}
-			})
-			$('input').on('compositionstart', function(e){
-				// 这里就阻止 input 在中文没选择时就执行
-				iscomposing = false;
-			})
-			$('input').on('compositionend', function(e){
-				// 如果输入非CJK文字，则不存在该问题，需重置为true
-				iscomposing = true;
-				// CJK被阻止了，所以这里要执行一次
-				inputDoing()
-			})
+// 解决思路
+let iscomposing = true;
+$('input').on('input', function(e){
+	if(iscomposing) {
+		// todo
+		inputDoing()
+	}
+})
+$('input').on('compositionstart', function(e){
+	// 这里就阻止 input 在中文没选择时就执行
+	iscomposing = false;
+})
+$('input').on('compositionend', function(e){
+	// 如果输入非CJK文字，则不存在该问题，需重置为true
+	iscomposing = true;
+	// CJK被阻止了，所以这里要执行一次
+	inputDoing()
+})
 								</script></code></pre>
 					</div>
 				</section>
 				<section>
-					<img src="./img/vue/intpu-1.png" />
+					<a target="_blank" href="img/vue/intpu-1.png"><img src="img/vue/intpu-1.png" /></a>
 				</section>
 				<section>
-					<img src="./img/vue/input-2.png" />
+					<a target="_blank" href="img/vue/input-2.png"><img src="img/vue/input-2.png" /></a>
 				</section>
 			</section>
 
@@ -522,11 +522,11 @@ export default {
 				<div>content-visibility: 一个可以提高渲染性能的css属性</div>
 				<div style="font-size: 26px;">因为content-visibility通过跳过屏幕外的内容渲染来缩短初始加载时间</div>
 				<div style="font-size: 26px;">contain-intrinsic-size指定元素的自然大小，避免滚动条的大小会发生变化带来的抖动感</div>
-				<a target="_blank" href="https://web.dev/content-visibility/">google</a>
+				<a target="_blank" href="https://web.dev/content-visibility/">content-visibility</a>
 			</section>
 
 			<section>
-				<div>thank you</div>
+				<img src="img/thank.jpeg" />
 			</section>
 
 		</div>
