@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>reveal.js</title>
+
+	<link rel="stylesheet" href="dist/reset.css">
+	<link rel="stylesheet" href="dist/reveal.css">
+	<link rel="stylesheet" href="dist/theme/black.css" id="theme">
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme">
+	<style>
+		.title {
+			font-size: 40px;
+			margin-bottom: 20px;
+		}
+
+		.content {
+			font-size: 30px;
+		}
+
+		.list-box {
+			font-size: 26px;
+		}
+	</style>
+</head>
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section>
+				前端如何保护数据/反爬虫
+			</section>
+			<section>
+				<ul class="list-box">
+					<li>为什么需要保护数据?</li>
+					<li>案例：FONT-FACE拼凑式</li>
+					<li>案例：BACKGROUND拼凑式</li>
+					<li>案例：字符穿插式</li>
+					<li>案例：伪元素隐藏式</li>
+					<li>案例：元素定位覆盖式</li>
+					<li>案例：IFRAME异步加载式</li>
+					<li>案例：字符分割式</li>
+					<li>案例：字符集替换式</li>
+					<li>服务端如何反爬虫</li>
+				</ul>
+			</section>
+			<section>
+				<div class="title">为什么需要保护数据</div>
+				<div class="content">
+					对于一张网页，我们往往希望它是结构良好，内容清晰的，这样搜索引擎才能更好的爬取其内容，提升网站相应的排名。
+					而反过来，又有一些情景，我们不希望内容能被轻易获取，比方说电商网站的交易额以及商品信息，教育网站的题目等。因为这些内容，往往是一个产品的生命线（公司的核心竞争力），必须做到有效地保护。这就是今天“前端如何保护数据/反爬虫”的由来。
+				</div>
+			</section>
+			<section>
+				<div class="title">FONT-FACE拼凑式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg1-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							猫眼电影里，对于票房数据，展示的并不是纯粹的数字。
+							页面使用了font-face定义了字符集，并通过unicode去映射展示。也就是说，除去图像识别，必须同时爬取字符集，才能识别出数字。
+							<a href="https://maoyan.com/films/1339160" target="_blank">金刚川</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">BACKGROUND拼凑式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg2-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							与font的策略类似，美团里用到的是background拼凑。数字其实是图片，根据不同的background偏移，显示出不同的字符。
+							（早期的美团使用BACKGROUND拼凑式，现在也使用FONT-FACE拼凑式了）
+							<a href="https://maoyan.com/films/1339160" target="_blank">美团</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">字符穿插式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg3-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							汽车之家里，把关键的厂商信息，做到了伪元素的content里。
+							这也是一种思路：爬取网页，必须得解析css，需要拿到伪元素的content，这就提升了爬虫的难度。
+							<a href="https://car.autohome.com.cn/config/series/3170.html" target="_blank">汽车之家</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">元素定位覆盖式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg4-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							还有热爱数学的去哪儿，对于一个3位数字的机票价格，先用三个i标签渲染，再用三个b标签去绝对定位偏移量，覆盖故意展示错误的i标签，最后在视觉上形成正确的价格…，不过对于不同的价格还有其他玄机。
+							<a href="https://flight.qunar.com/site/oneway_list.htm?searchDepartureAirport=%E6%88%90%E9%83%BD&searchArrivalAirport=%E5%A4%A7%E8%BF%9E&searchDepartureTime=2020-12-14&searchArrivalTime=2020-12-16&nextNDays=0&startSearch=true&fromCode=CTU&toCode=DLC&from=qunarindex&lowestPrice=null"
+								target="_blank">去哪儿</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">IFRAME异步加载式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg5-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							网易云音乐页面一打开，html源码里几乎只有一个iframe，并且它的src是空白的：about:blank。接着js开始运行，把整个页面的框架异步塞到了iframe里面…
+							不过这个方式带来的难度并不大，只是在异步与iframe处理上绕了个弯（或者有其他原因，不完全是基于反爬虫考虑）
+							<a href="https://music.163.com/#" target="_blank">网易云音乐</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">字符分割式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg6-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							在一些展示代理IP信息的页面，对于IP的保护也是大费周折。
+							他们会先把IP的数字与符号分割成dom节点，再在中间插入迷惑人的数字，如果爬虫不知道这个策略，还会以为自己成功拿到了数值；不过如果爬虫注意到，就很好解决了。
+							<a href="http://www.goubanjia.com/" target="_blank">全网代理IP</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">字符集替换式</div>
+				<section>
+					<section>
+						<img src="./img/spider/eg6-1.png" />
+					</section>
+					<section>
+						<div class="content">
+							同样会欺骗爬虫的还有去哪儿的移动版。
+							html里明明写的3211，视觉上展示的却是1233。原来他们重新定义了字符集，3与1的顺序刚好调换得来的结果…
+							在字体文件中打乱数字的顺序，按照打乱后的数字来现实。
+							<a href="https://m.flight.qunar.com/ncs/page/flightlist?arrCity=%E4%B8%8A%E6%B5%B7&depCity=%E5%8C%97%E4%BA%AC&goDate=2020-12-13&_firstScreen=1&_gogokid=12"
+								target="_blank">去哪儿的移动版</a>
+						</div>
+					</section>
+				</section>
+			</section>
+
+			<section>
+				<div class="title">服务端如何反爬虫</div>
+				<div class="content">
+					User-Agent + Referer检测<br />
+					账号及Cookie验证<br />
+					验证码<br />
+					IP限制频次<br />
+					用户封禁<br />
+					通过robots.txt来限制爬虫<br />
+				</div>
+			</section>
+
+		</div>
+	</div>
+
+	<script src="dist/reveal.js"></script>
+	<script src="plugin/notes/notes.js"></script>
+	<script src="plugin/markdown/markdown.js"></script>
+	<script src="plugin/highlight/highlight.js"></script>
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+</html>
