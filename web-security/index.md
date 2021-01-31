@@ -232,6 +232,12 @@ try {
 文件上传漏洞正是在文件上传功能中，由于对用户上传的文件数据未做有效检测或过滤不严，导致上传的恶意文件被服务端解释器解析执行，利用漏洞可获取系统控制权。
 若服务器支持某种语言的解析执行，比如上传了 ASP、JSP、ASPX 等文件对应代码执行。
 
+```
+// client check
+upload a.php remove event listener
+http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
+```
+
 ##  绕过上传限制
 ### 禁用 JS
 前端开发时一般只会做后缀名判断，若不是就中断处理。对于这种情况安装个 NoScript 插件，禁用 JS 再上传即可绕过。
@@ -241,6 +247,7 @@ try {
 不同文件格式有不同的文件头
 ### %00 截断
 如果限制不当，仍有可能绕过。比如对文件后缀、路径上的检测，有时可通过添加 ％00 截断来绕过
+
 ```
 upload.php?type=image&file=shell.php%00.jpg
 ```
