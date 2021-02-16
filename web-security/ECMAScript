@@ -1,0 +1,26 @@
+ECMAScript
+
+resolve.extensions
+Sparta
+Sentry
+Context
+
+挂网交易总额
+
+16,062,702
+万元
+入驻供应商
+
+138,221
+家
+入驻采购企业
+
+10,123
+家
+Jenkins
+
+
+git pre-commit hook、Eslint、husky、lint-staged、 prettier
+
+
+因考虑 SEO 和自建同构渲染成本我们使用 Next.js 进行开发以及拥抱 React 社区大部分组件使用函数式 + hook 开发来复用逻辑从开发工时来看缩短了 50% ，采用设置环境变量及基于 webpack 的 resolve.extensions 将环境变量动态设置为定制组件后缀名实现多租户和多主题定制开发有效复用了公共模块代码及减少公共设施开发工作量（如登录、退出、修改个人信息等）最终实现缩短定制租户开发周期40%（取决于定制程度），采用搭配使用 git pre-commit hook、Eslint、husky、lint-staged、 prettier 来统一代码风格从而缩短 CodeReview 时间（还可以做git commit message 格式验证目前项目暂未使用），考虑应用公共状态只有User、Config、Theme等使用新版本 Context 来管理和维护公共状态，集成集团安全 SDK Sparta 为应用关键流程保证安全，集成了集团定制 Sentry 及邮件提醒快速处理线上报错。
