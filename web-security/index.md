@@ -412,8 +412,116 @@ BurpSuite/Auto Repeater
 3.  前后端双重验证：在涉及敏感操作行为时，前端与后端同时对用户输入数据进行权限校验，尤其是前端校验特别容易被改包绕过。
 4.  对于特别敏感的操作增设密码或安全问题等验证方式：比如修改密码要求输入原密码。
 
+# 如何构建安全的WEB？
+主要涉及 Apache 和 Nginx 服务器 和 PHP 语言配置。
+##  Apache 
+### 关闭目录浏览功能
+Apache 默认允许目录浏览，如果目录下找不到可浏览器的页面，就会出现目录浏览问题，造成信息泄露。
+Ubuntu 是通过修改 Apache 配置文件 /etc/apache2/apache2.conf，其他平台大多是叫 httpd.conf 的配置文件名，修改“Indexes”为“－Indexes”
+### 开启访问日志
+在浏览器被攻击时，通过日志可以帮助回溯整个安全事件的过程，有助于定位漏洞成因和攻击者。
+Apache 已开启访问日志记录，你需要确认下配置文件是否开启 CustomLog 的日志路径设置：
+```
+/etc/apache2/sites-available/default-ssl.conf
+/etc/apache2/sites-available/000-default.conf
+```
+### 禁止特定目录解析 PHP
+对于不需要执行 PHP 脚本的目录，可禁止 PHP 解析，这种配置可有效防止上传漏洞的攻击，特别是上传目录的 PHP 解析限制。
+```
+<Directory "/www/html/uploads">
+  php_flag engine off
+</Directory>
+```
+### 不以 Root 启动 Apache
+一句话“权利越大，责任越大”，最好按需、隔离分配权限。
+httpd.conf，一般就直接用 User 与 Group 来指定用户名和用户组：
+```
+User apache
+Group apache
+```
+### 禁止访问外部文件
+当网站存在目录遍历漏洞时，攻击者可能通过 ../ 来访问系统上的任意目录，通过禁止 Apache 访问网站目录以外的目录和文件，可以有效地降低这种攻击带来的危害。
+```
+# 先禁止任何目录访问
+	Order Deny,Allow
+	Deny from all
+					
+# 设置可访问的目录
+	Order Allow,Deny
+	Allow from {网站根目录}
+```
+### 错误页面重定向
+Apache 错误页面重定向功能可以防止敏感信息泄露，比如网站路径等信息。
+```
+ErrorDocument 400 /custom400.html
+ErrorDocument 401 /custom401.html
+ErrorDocument 403 /custom403.html
+ErrorDocument 404 /custom404.html
+ErrorDocument 405 /custom405.html
+ErrorDocument 500 /custom500.html
+```
+### 删除默认页面
+Apache 安装后会有默认页面，安装后仅用于测试，用于生产环境中时需要删除，这里需要删除 icons 和 manual 两个目录文件，以避免不必要的信息泄露。
+##  Nginx
+Nginx 配置文件通常位于 /usr/local/etc/nginx/nginx.conf
+### 关闭目录浏览
+Nginx 默认不允许目录浏览，你可以再确认下配置文件中的 autoindex 是否配置为 off，以防止敏感信息泄露。
+```
+autoindex off
+```
+### 开启访问日志
+开启日志有助追踪攻击途径，以及定位攻击者。默认情况下，Nginx 会开启访问日志，你可在配置文件中确认下是否已开启：
+```
+access_log /backup/nginx_logs/access.log combined;
+```
+### 限制特定目录解析 PHP
+对于不需要执行 PHP 脚本的目录，可禁止 PHP 解析，这种配置可有效防止上传漏洞的攻击，特别是上传目录的 PHP 解析限制，通过 nginx.conf 配置文件使用 deny all 来限制特定目录被 PHP 解析：
+```
+location ~* ^/data/cgisvr/log/.*\.(php|php5)$
+{
+    deny all;
+}
+```
+### 删除默认页面
+Nginx 也存在默认页面，上线后应该删除，防止不必要的信息泄露，可通过删除如下配置信息来解决。
+```
+location /doc {
+  root /usr/share;
+  autoindex on;
+  allow 127.0.0.1;
+  deny all;
+}
+location /images {
+  root /usr/share;
+  autoindex off;
+}
+```
+##  PHP 安全配置
+### 限制脚本访问权限
+PHP 默认配置允许 php 脚本程序访问服务器上的任意文件，为避免 php 脚本访问不该访问的文件，从一定程度上限制了 php 木马的危害，一般设置为只能访问网站的目录：
+```
+open_basedir = /usr/local/apache2/htdocs（网站根目录）
+```
+### 禁止危险函数
+ 的特殊函数可以执行系统命令，查询任意目录，增加修改删除文件等。
+```
+disable_functions = exec,popen,system,passthru,shell_exec
+```
+### 关闭错误消息显示
+一般 PHP 错误信息可能会包含网站路径或 SQL 查询语句等敏感信息，这些信息为攻击者提供有价值的信息，因此应该禁止错误显示，配置方式如下：
+```
+display_errors = Off
+```
+### 禁止访问远程文件
+php 脚本若存在远程文件包含漏洞可以让攻击者直接获取网站权限及上传 web 木马，因此建议关闭远程文件访问功能，若需要访问可采用其他方式，比如 libcurl 库，配置如下:
+```
+allow_url_fopen = Off
+allow_url_include = Off
+```
 
-
+# 测试工具
+[BurpSuite/攻击web 应用程序的集成平台](https://t0data.gitbooks.io/burpsuite/content/chapter1.html)
+[HackBar/测试网站安全性的小工具](https://addons.mozilla.org/zh-CN/firefox/addon/hackbartool/)
 
 # 靶场
 [sqli-labs 一款用于学习 SQL 注入的靶场平台](https://github.com/Audi-1/sqli-labs)
