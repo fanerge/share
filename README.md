@@ -3,13 +3,13 @@
 # 分享目录
 <ul class="list-box">
   <li>
-    <a href="/share/index-hpack.html">HTTP2/HPACK技术分享</a>
+    <a href="https://fanerge.github.io/share/index-hpack.html">HTTP2/HPACK技术分享</a>
   </li>
   <li>
-    <a href="/share/index-vue.html">VUE技术分享</a>
+    <a href="https://fanerge.github.io/share/index-vue.html">VUE技术分享</a>
   </li>
   <li>
-    <a href="/share/index-spider.html">前端保护数据/反爬虫</a>
+    <a href="https://fanerge.github.io/share/index-spider.html">前端保护数据/反爬虫</a>
   </li>
 </ul>
 
