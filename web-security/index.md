@@ -66,18 +66,19 @@ javascript:alert(1)
 
 # SQL 注入
 ##  原因
-开发时未对用户的输入数据（可能是 GET 或 POST 参数，也可能是 Cookie、HTTP 头等）进行有效过滤，直接带入 SQL 语句解析，使得原本应为参数数据的内容，却被用来拼接 SQL 语句做解析。
+开发时未对用户的输入数据（可能是 GET 或 POST 参数，也可能是 Cookie、HTTP 头等）进行有效过滤，直接带入 SQL 语句解析，使得原本应为参数数据的内容，却被用来拼接 SQL 语句做解析（一句话解释，错误的将数据当代码解析，最终导致 SQL 注入漏洞的产生。）。
 十几年前，有个号称有可登录任意网站管理后台的万能密码，只要在用户名和密码中均输入 'or'1'='1（注意单引号的使用）即可登录后台。
 ```
-SELECT username, password FROM users WHERE username=''' and password='' LIMIT 0,1
+SELECT username, password FROM users WHERE username='$uname' and password='$passwd' LIMIT 0,1
 SELECT username, password FROM users WHERE username='admin'or'1'='1' and password=''or'1'='1' LIMIT 0,1
-
+// $uname 为 admin'or'1'='1；password 为 'or'1'='1
 ```
 ##  举例
 ### 数字/整数型注入
 注入的参数为整数时就是数字型注入，或者叫整数型注入。
 ```
-SELECT * FROM table WHERE id=1
+SELECT * FROM table WHERE id=2
+SELECT * FROM table WHERE id=1+1
 ```
 此处 id 参数为整数，两边无引号。测试时可以使用 1+1 和 3-1 这种计算结果相同的参数值去构造请示，对比响应结果是否一致，如果相同就可能在数字型注入。
 
