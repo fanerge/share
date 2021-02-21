@@ -1,11 +1,12 @@
+
+# 需要一些前置知识
+```
 PHP + MYSQL + Apache
 安装 Pikachu 靶场
-
-```
 docker search pikachu
 docker pull area39/pikachu
 // 运行容器
-docker run -d --name=pikachu --rm -p6666:80 area39/pikachu
+docker run -d --name=pikachu --rm -p9999:80 area39/pikachu
 -d：代表后台运行
 -t：为容器分配伪终端
 --name：命名容器
@@ -21,7 +22,7 @@ docker exec -it pikachu sh
 # XSS（Cross-site Script，跨站脚本）
 ##  原因
 XSS 漏洞，通常指的是网站对用户输入数据未做有效过滤，攻击者可以将恶意脚本注入网站页面中，达到执行恶意代码的目的。
-##  分类
+##  靶场演示
 一般将 XSS：反射型、存储型、DOM 型。
 ### 反射型 XSS（客户端自己玩）
 反射型 XSS 又被称为非持久型跨站脚本，它是将攻击代码放在 URL 参数中，而不是存储到服务器，因此需要诱使用户点击才能触发攻击。
@@ -63,7 +64,7 @@ javascript:alert(1)
 4.  Httponly Cookie
 5.  Content Security Policy
 
-
+[XSS cheat sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
 # SQL 注入
 ##  原因
 开发时未对用户的输入数据（可能是 GET 或 POST 参数，也可能是 Cookie、HTTP 头等）进行有效过滤，直接带入 SQL 语句解析，使得原本应为参数数据的内容，却被用来拼接 SQL 语句做解析。
@@ -91,7 +92,12 @@ SELECT * FROM table WHERE name='test'
 ### 二次注入
 有可能第一次带入参数时做了安全转义，但开发人员在二次使用时并没有做转义，导致第二次使用时才产生注入，这就是二次注入。
 
-
+##  靶场演示
+```
+以搜索型注入为例
+php源码分析：/app/vul/sqli/sqli_search.php
+ $query="select username,id,email from member where username like '%$name%'";
+```
 ##  预防
 [SQL 注入检测-sqlmap](http://sqlmap.org/)
 
@@ -105,6 +111,16 @@ SELECT * FROM table WHERE name='test'
 ##  原因
 由于未校验请求来源，导致攻击者可在第三方站点发起 HTTP 请求，并以受害者的目标网站登录态（cookie、session 等）请求，从而执行一些敏感的业务功能操作，比如更改密码、修改个人资料、关注好友。
 
+##  靶场演示
+```
+php源码地址：/app/vul/csrf/csrfget/csrf_get_edit.php
+CSRF（get）为列
+修改用户信息请求：http://localhost:9999/vul/csrf/csrfget/csrf_get_edit.php?sex=12&phonenum=12&add=12&email=12&submit=submit
+身份cookie
+Cookie: PHPSESSID=bvrp622ugf4retneht933o14bj
+// 带token（比较安全）
+// /app/vul/csrf/csrftoken/token_get_edit.php
+```
 
 ##  预防
 1.  令请求参数不可预测，所以常用的方法就是在敏感操作请求上使用 POST 代替 GET，然后添加验证码或 Token 进行验证。
@@ -112,13 +128,10 @@ SELECT * FROM table WHERE name='test'
 3.  Token 验证，提交表单后，会连同此 Token（隐藏的input） 一并提交，由服务器再做比对校验，Token 验证无疑是最常用的方法，它对用户是无感知的，体验上比验证码好太多了。
 
 ```
-// 提交的表单中，添加一个隐藏的 Token，其值必须是保证1.服务端提供 2.不可预测的随机数。
+// 提交的表单中，添加一个隐藏的 Token，其值必须是保证 1.服务端提供 2.不可预测的随机数。
 <input type = "hidden" value="afcsjkl82389dsafcjfsaf352daa34df" name="token" >
 
 ```
-
-
-
 
 这里不推荐 referer（即请求头中的来源地址）限制方法，因为通过 javascript:// 伪协议就能以空 referer 的形式发起请求，很容易绕过限制。一些移动 App 上的请求又可能无法完成，因为移动 App 上的 http/https 请求经常是空 referer。
 
@@ -131,31 +144,18 @@ SELECT * FROM table WHERE name='test'
 ## 产生原因
 攻击者向服务端发送包含恶意 URL 链接的请求，借由服务端去访问此 URL ，以获取受保护网络内的资源的一种安全漏洞。SSRF 常被用于探测攻击者无法访问到的网络区域，比如服务器所在的内网，或是受防火墙访问限制的主机。
 
+##  靶场演示
 ```
+php源码：/app/vul/ssrf/ssrf_curl.php
 // 假设只有内网可以访问到 https://www.baidu.com
 http://localhost:9999/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com
-
-// 查看 php 源码分析 
-if(isset($_GET['url']) && $_GET['url'] != null){
-  
-    //接收前端 URL 没问题,但是要做好过滤,如果不做过滤,就会导致 SSRF
-    $URL = $_GET['url'];
-    $CH = curl_init($URL);
-    curl_setopt($CH, CURLOPT_HEADER, FALSE);
-    curl_setopt($CH, CURLOPT_SSL_VERIFYPEER, FALSE);
-    $RES = curl_exec($CH);
-    curl_close($CH) ;
 //ssrf 的问题是:前端传进来的 url 被后台使用 curl_exec()进行了请求,然后将请求的结果又返回给了前端
 //除了 http/https 外,curl 还支持一些其他的协议 curl --version 可以查看其支持的协议,telnet
 //curl 支持很多协议，有 FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE 以及 LDAP
     echo $RES;
 }
-```
-
-```
-// 用户账户的详细信息
+// 利用file://用户账户的详细信息
 http://localhost:9999/vul/ssrf/ssrf_curl.php?url=file:///etc/passwd
-
 
 ```
 ##  具体有哪些危害
@@ -178,11 +178,31 @@ http://localhost:9999/vul/ssrf/ssrf_curl.php?url=file:///etc/passwd
 ##  产生原因
 XXE（XML External Entity，XML 外部实体注入）正是当允许引用外部实体时，通过构造恶意内容，导致读取任意文件、执行系统命令、内网探测与攻击等危害的一类漏洞。
 
+##  XML 文档结构
+XML 文档结构包括 XML 声明、文档类型定义（DTD，Document Type Definition）、文档元素。
+```
+<!--XML声明-->
+<?xml version="1.0"?> 
+<!--文档类型定义-->
+<!DOCTYPE people [  <!--定义此文档是 people 类型的文档-->
+  <!ELEMENT people (name,age,mail)>  <!--定义people元素有3个元素-->
+  <!ELEMENT name (#PCDATA)>     <!--定义name元素为“#PCDATA”类型-->
+  <!ELEMENT age (#PCDATA)>   <!--定义age元素为“#PCDATA”类型-->
+  <!ELEMENT mail (#PCDATA)>   <!--定义mail元素为“#PCDATA”类型-->
+]]]>
+<!--文档元素-->
+<people>
+  <name>john</name>
+  <age>18</age>
+  <mail>john@qq.com</mail>
+</people>
+```
 
-##  攻击手段
+##  靶场演示
+```
+php源码地址：./xxe/xxe_1.php
 // 读取本地文件
 通过 file:// 可以读取本地文件，造成敏感文件泄露：
-```
 // 检测
 <!DOCTYPE foo [<!ELEMENT foo ANY>
     <!ENTITY xxe SYSTEM "file:///etc/passwd">
@@ -194,8 +214,9 @@ XXE（XML External Entity，XML 外部实体注入）正是当允许引用外部
 由于我这里使用 Docker 搭建的靶场环境，由于 Docker 是利用 Linux 的 Namespace 和 Cgroups，它的原理是使用 Namespace 做主机名、网络、PID 、用户及用户组等资源的隔离，使用 Cgroups 对进程或者进程组做资源（例如：CPU、内存等）的限制。
 其中 User Namespace (user)  隔离用户和用户组，使 Docker 中的用户和我系统的用户隔离开。
 
+
 ##  预防
-[XXE 漏洞利用工具-XXEinjector](XXEinjector)
+[XXE 漏洞利用工具-XXEinjector](https://github.com/enjoiz/XXEinjector)
 
 要防御 XXE 也比较简单，关闭外部实体引用即可。
 比如在 Java 中常用于解析 XML 的 DocumentBuilderFactory，就可以通过 setFeature 方法防御 XXE 漏洞
@@ -239,6 +260,46 @@ try {
 反序列化：前面保存的字符串，快速地重建对象。
 ## 漏洞是如何产生的？
 当传给 unserialize() 的参数由外部可控时，若攻击者通过传入一个精心构造的序列化字符串，从而控制对象内部的变量甚至是函数，比如 PHP 中特殊的魔术方法，这些方法在某些情况下会被自动调用，为实现任意代码执行提供了条件，这时反序列化漏洞就产生了。有点懵，我们看靶场中实例吧。
+##  靶场演示
+```
+php源码：/app/vul/unserilization/unser.php
+$str = O:1:"S":1:{s:4:"test";s:29:"<script>alert('xss')</script>";}
+$u = unserialize($str);
+
+// 解释
+a - array 数组型
+b - boolean 布尔型
+d - double 浮点型
+i - integer 整数型
+o - common object 共同对象
+r - objec reference 对象引用
+s - non-escaped binary string 非转义的二进制字符串
+S - escaped binary string 转义的二进制字符串
+C - custom object 自定义对象
+O - class 对象
+N - null 空
+R - pointer reference 指针引用
+U - unicode string Unicode 编码的字符串
+
+// php魔术方法
+// 魔术方法就是 PHP 中一些在某些情况下会被自动调用的方法，无须手工调用，比如当一个对象创建时 __construct 会被调用，当一个对象销毁时 __destruct 会被调用。
+__construct()   #类的构造函数
+__destruct()    #类的析构函数
+__call()        #在对象中调用一个不可访问方法时调用
+__callStatic()  #用静态方式中调用一个不可访问方法时调用
+__get()    #获得一个类的成员变量时调用
+__set()    #设置一个类的成员变量时调用
+__isset()  #当对不可访问属性调用isset()或empty()时调用
+__unset()  #当对不可访问属性调用unset()时被调用。
+__sleep()  #执行serialize()时，先会调用这个函数
+__wakeup() #执行unserialize()时，先会调用这个函数
+__toString()   #类被当成字符串时的回应方法
+__invoke()     #调用函数的方式调用一个对象时的回应方法
+__set_state()  #调用var_export()导出类时，此静态方法会被调用。
+__clone()      #当对象复制完成时调用
+__autoload()   #尝试加载未定义的类
+__debugInfo()  #打印所需调试信息
+```
 ## 防御反序列化漏洞
 1.  黑白名单限制/针对反序列化的类做一份白名单或黑名单的限制，首选白名单，避免一些遗漏问题被绕过。这种方法是当前很多主流框架的修复方案。
 2.  WAF/Web应用防火墙/收集各种语言的反序列化攻击数据，提取特征用于拦截请求。
@@ -251,12 +312,6 @@ RASP（Runtime Application Self-Protection）是一项运行时应用程序自�
 文件上传漏洞正是在文件上传功能中，由于对用户上传的文件数据未做有效检测或过滤不严，导致上传的恶意文件被服务端解释器解析执行，利用漏洞可获取系统控制权。
 若服务器支持某种语言的解析执行，比如上传了 ASP、JSP、ASPX 等文件对应代码执行。
 
-```
-// client check
-upload a.php remove event listener
-http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
-```
-
 ##  绕过上传限制
 ### 禁用 JS
 前端开发时一般只会做后缀名判断，若不是就中断处理。对于这种情况安装个 NoScript 插件，禁用 JS 再上传即可绕过。
@@ -264,12 +319,6 @@ http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
 对于前端 JS 的限制，除了禁用 JS 外，我们还可以使用 curl、nc、BurpSuite 等工具构造数据包去发送请求，这样是不经过浏览器前端 JS 的处理，从而绕过限制。
 ### 文件头绕过
 不同文件格式有不同的文件头
-### %00 截断
-如果限制不当，仍有可能绕过。比如对文件后缀、路径上的检测，有时可通过添加 ％00 截断来绕过
-
-```
-upload.php?type=image&file=shell.php%00.jpg
-```
 ### 大小写绕过
 有时检测未区分文件名大小写时，可使用此方法绕过。
 ### 后缀别名绕过
@@ -279,6 +328,15 @@ php - php\php2\php3\pht
 asp - asp\asa\cer\cdx
 jsp - jsp\jspx\jspf
 ```
+
+##  靶场演示
+```
+以 client check为例
+移除 checkFileExt 文件限制函数
+上传a.php文件
+访问http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
+```
+
 ###  预防
 1. 严格检测上传文件后缀名、[文件头](https://www.cnblogs.com/mq0036/p/3912355.html)、Content-type，尽量采用白名单方式限制。
 2. 重编码文件，比如对图片或视频做转换处理。
@@ -297,13 +355,6 @@ location ~* ^/uploads/.*\.(php|php5)$
     deny all;
   }
 ```
-
-
-
-
-
-
-
 
 
 # 远程命令/代码执行漏洞RCE(remote command/code execute)
@@ -341,8 +392,11 @@ $()
 命令格式：{cmd,arg}，Linux bash 下用于合并多个命令及参数，在当前 shell 执行。
 ```
 ##  靶场演示
-127.0.0.1;cat /etc/passwd
+```
+以 exec "ping" 为例
 php源码路径：/app/vul/rce
+127.0.0.1;cat /etc/passwd
+```
 
 ##  漏洞防御
 1.  尽量不用系统命令执行函数，很多方式其实是可以通过一些语言内置 API 完成。
@@ -365,9 +419,12 @@ include_once $Footer . './footer.php'
 2.  远程文件包含漏洞：能够通过url地址对远程的文件进行包含，这意味着攻击者可以传入任意的代码，这种情况没啥好说的，准备挂彩。
 因此，在web应用系统的功能设计上尽量不要让用户直接传变量给包含函数，如果非要这么做，也一定要做严格的白名单策略进行过滤。
 
-##  靶场演示(本地文件包含漏洞)
+##  靶场演示
+```
+以本地文件包含漏洞为例
 php源码：/app/vul/fileinclude/fi_local.php
-[构造请求](http://127.0.0.1:9999/vul/fileinclude/fi_local.php?filename=../../../../../../../../etc/passwd&submit=%E6%8F%90%E4%BA%A4)
+http://127.0.0.1:9999/vul/fileinclude/fi_local.php?filename=../../../../../../../../etc/passwd&submit=%E6%8F%90%E4%BA%A4
+```
 
 ##  挖掘文件包含漏洞
 1.  静态检测思路/扫描代码中的文件包含函数如 include 看传入的参数是否依赖了用户的数据 $_GET\$_POST\$_COOKIE等等
@@ -379,7 +436,6 @@ php源码：/app/vul/fileinclude/fi_local.php
 3.  关闭 allow_url_include/在 php.ini 中设置 allow_url_include＝Off（默认关闭），避免远程文件包含
 
 # 越权漏洞（over permission）
-IDOR（Insecure Direct Object Reference，不安全的对象引用）
 ##  越权漏洞成因
 越权漏洞是很多应用中比较常见的漏洞类型，它是在授权逻辑上存在安全缺陷导致的问题。在基于用户提供的输入对象直接访问，而未进行有效鉴权，导致一些超出预期的操作行为，可能导致信息泄露或者提权，具体危害的大小取决于业务场景，所以对越权漏洞的理解依赖于你对业务逻辑的理解深度。
 ##  越权漏洞的分类
@@ -411,6 +467,18 @@ BurpSuite/Auto Repeater
 2.  最低权限原则：只授予执行操作所必需的最小访问权限，并且对于该访问权只准许使用所需的最少时间。
 3.  前后端双重验证：在涉及敏感操作行为时，前端与后端同时对用户输入数据进行权限校验，尤其是前端校验特别容易被改包绕过。
 4.  对于特别敏感的操作增设密码或安全问题等验证方式：比如修改密码要求输入原密码。
+
+
+
+
+# 靶场其他漏洞演示
+##  文件下载漏洞
+```
+// 正常下载图片
+http://localhost:9999/vul/unsafedownload/execdownload.php?filename=kb.png
+// 构造下载路径(下载源码)
+http://localhost:9999/vul/unsafedownload/execdownload.php?filename=../execdownload.php
+```
 
 # 如何构建安全的WEB？
 主要涉及 Apache 和 Nginx 服务器 和 PHP 语言配置。
@@ -518,6 +586,11 @@ php 脚本若存在远程文件包含漏洞可以让攻击者直接获取网站�
 allow_url_fopen = Off
 allow_url_include = Off
 ```
+
+
+
+
+
 
 # 测试工具
 [BurpSuite/攻击web 应用程序的集成平台](https://t0data.gitbooks.io/burpsuite/content/chapter1.html)
