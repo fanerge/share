@@ -6,7 +6,7 @@ PHP + MYSQL + Apache
 docker search pikachu
 docker pull area39/pikachu
 // 运行容器
-docker run -d --name=pikachu --rm -p9999:80 area39/pikachu
+docker run -d --name=pikachu --rm -p 9999:80 area39/pikachu
 -d：代表后台运行
 -t：为容器分配伪终端
 --name：命名容器
