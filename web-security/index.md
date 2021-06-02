@@ -51,18 +51,19 @@ javascript:alert(1)
 <h1 style="color: red">我是 h1</h1>
 <h2 style="color: blue">我是 h2</h2>
 ```
-
 ##  预防
 ### 站点扫描方案
 [XSS 漏洞扫描的开源工具-XSStrike](https://github.com/s0md3v/XSStrike)
 [XSS 漏洞扫描的开源工具-NoXSS](https://github.com/lwzSoviet/NoXss)
 
 ### 编码层预防
+```
 1.  输入检查，白名单限制用户输入，<script>、javascript:、<、>、'、"、&、#，一定不要单纯只在客户端上做过滤，还要结合服务端做限制。若只是客户端上做过滤，那么抓包后修改数据重发就绕过了。
 2.  输出检查
 3.  innerHTML（textContent）、href、src、element.setAttribute、element.style.backgroundImage、
 4.  Httponly Cookie
 5.  Content Security Policy
+```
 
 [XSS cheat sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
 # SQL 注入
@@ -170,7 +171,7 @@ http://localhost:9999/vul/ssrf/ssrf_curl.php?url=file:///etc/passwd
 ##  预防
 [SSRF 检测工具 - SSRFmap](https://github.com/swisskyrepo/SSRFmap)
 
-1.  采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问拉勾网域名 *.tabe.com.cn；
+1.  采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问 tabe 域名 *.tabe.cn；
 2.  限制内网 IP 访问，常见的内网 IP 段有 10.0.0.0 - 10.255.255.255、172.16.0.0 - 172.31.255.255、192.168.0.0 - 192.168.255.255；
 3.  禁用一些不必要的协议，比如 file://、gopher://(常用于攻击内网ftp、redis、telnet、smtp等服务)、dict://(常用于刺探端口)。
 4.  另外关闭错误回显、关闭高危端口、及时修复漏洞，哪怕它是处于内网环境，都有助于缓解 SSRF 漏洞的进一步利用。

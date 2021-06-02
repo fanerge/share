@@ -203,7 +203,7 @@ curl_close($CH) ;</code></pre>
 <p><a href="https://github.com/swisskyrepo/SSRFmap">SSRF 检测工具 - SSRFmap</a></p>
 
 <ol>
-  <li>采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问拉勾网域名 *.tabe.com.cn；</li>
+  <li>采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问 tabe 域名 *.tabe.cn；</li>
   <li>限制内网 IP 访问，常见的内网 IP 段有 10.0.0.0 - 10.255.255.255、172.16.0.0 - 172.31.255.255、192.168.0.0 - 192.168.255.255；</li>
   <li>禁用一些不必要的协议，比如 file://、gopher://(常用于攻击内网ftp、redis、telnet、smtp等服务)、dict://(常用于刺探端口)。</li>
   <li>另外关闭错误回显、关闭高危端口、及时修复漏洞，哪怕它是处于内网环境，都有助于缓解 SSRF 漏洞的进一步利用。</li>
