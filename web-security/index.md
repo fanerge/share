@@ -361,12 +361,12 @@ location ~* ^/uploads/.*\.(php|php5)$
 
 # 远程命令/代码执行漏洞RCE(remote command/code execute)
 ##  命令注入漏洞成因
-命令注入，主要指应用在服务器或客户端上，允许拼接系统命令并执行而造成的漏洞。对于 web 网站，通常是针对服务器的攻击利用。
+服务端直接将接受到的数据传入到系统命令执行函数去执行（没有验证参数）。
 ```
 PHP 中常见的系统命令执行函数有：
 system()
 exec()
-shell_ exec()
+shell_exec()
 proc_open()
 ...
 ```
@@ -380,10 +380,10 @@ proc_open()
 命令格式：cmd1 | cmd2，cmd1 的执行结果传递给 cmd2 去执行。
 ||
 命令格式：cmd1 || cmd2，cmd1 执行失败后就执行 cmd2。
-&
-命令格式：cmd1 & cmd2，& 用于分隔多个命令，命令按顺序 cmd1、cmd2 执行。
 ;
 命令格式：cmd1 ; cmd2，分号用于分隔多个命令去执行，命令按顺序 cmd1、cmd2 执行。
+&
+命令格式：cmd1 & cmd2，& 用于分隔多个命令，命令按顺序 cmd1、cmd2 执行。
 ``
 命令格式：cmd，注意这里是对反斜号，代表命令执行结果的输出，即命令替换。
 $()
@@ -471,8 +471,29 @@ BurpSuite/Auto Repeater
 4.  对于特别敏感的操作增设密码或安全问题等验证方式：比如修改密码要求输入原密码。
 
 
+# 点击劫持（clickJack）
+```
+// 原因
+在网页中插入一个 transparent 的iframe，iframe 覆盖在定制位置，点击网页中的组件会触发 iframe 中的对应事件。
+// 防御
+1.  X-FRAME-OPTIONS: DENY 和 SAMEORIGIN，可以禁止或指定域名放入当前页面的 iframe 中。
+2.  CSP frame-src 设置允许通过类似<frame>和<iframe>标签加载的内嵌内容的源地址。
+```
 
-
+# DDoS分布式拒绝服务攻击
+```
+// 原因
+分布式拒绝服务攻击可以使很多的计算机在同一时间访问同一站点或IP等，使攻击的目标无法正常使用。
+之前 GitHub 在一瞬间遭到高达 1.35Tbps 的带宽攻击。这次 DDoS 攻击几乎可以堪称是互联网有史以来规模最大、威力最大的 DDoS 攻击了。
+// 1KB = 1024B；TB > GB > MB > KB > B // 1TB=1024GB=2^40字节
+// 对我们业务有什么影响呢？
+// 大量恶意请求占用带宽，甚至导致服务器宕机无法正常使用。
+https://www.zhihu.com/question/22259175
+分类：SYN Flood、DNS Query Flood、UDP Flood、ICMP Flood
+// 这是一种利用TCP协议缺陷，发送大量伪造的TCP连接请求，从而使得被攻击方资源耗尽（CPU满负荷或内存不足）的攻击方式。建立TCP连接，需要三次握手——客户端发送SYN报文，服务端收到请求并返回报文表示接受，客户端也返回确认，完成连接。
+// 防御
+DDoS流量清洗（三方企业服务）、黑名单
+```
 # 靶场其他漏洞演示
 ##  文件下载漏洞
 ```
@@ -588,11 +609,6 @@ php 脚本若存在远程文件包含漏洞可以让攻击者直接获取网站�
 allow_url_fopen = Off
 allow_url_include = Off
 ```
-
-
-
-
-
 
 # 测试工具
 [BurpSuite/攻击web 应用程序的集成平台](https://t0data.gitbooks.io/burpsuite/content/chapter1.html)
