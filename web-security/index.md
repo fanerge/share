@@ -173,8 +173,19 @@ http://localhost:9999/vul/ssrf/ssrf_curl.php?url=file:///etc/passwd
 
 1.  采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问 tabe 域名 *.tabe.cn；
 2.  限制内网 IP 访问，常见的内网 IP 段有 10.0.0.0 - 10.255.255.255、172.16.0.0 - 172.31.255.255、192.168.0.0 - 192.168.255.255；
-3.  禁用一些不必要的协议，比如 file://、gopher://(常用于攻击内网ftp、redis、telnet、smtp等服务)、dict://(常用于刺探端口)。
+3.  禁用一些不必要的协议，比如 file://、dict://(常用于刺探端口)。
 4.  另外关闭错误回显、关闭高危端口、及时修复漏洞，哪怕它是处于内网环境，都有助于缓解 SSRF 漏洞的进一步利用。
+
+##  dict（介绍）
+```
+DICT协议,一个字典服务器协议,A Dictionary Server Protocol
+使用：dict://serverip:port/命令:参数
+向服务器的端口请求为【命令:参数】读取 redis 的变量
+curl dict://192.168.0.67:6379/get:name
+curl 支持的通信协议有FTP、FTPS、HTTP、HTTPS、TFTP、SFTP、Gopher、SCP、Telnet、DICT、FILE、LDAP、LDAPS、IMAP、POP3、SMTP和RTSP。
+
+```
+[SSRF之利用dict和gopher吊打Redis](https://www.cnblogs.com/Zh1z3ven/p/14214208.html)
 
 # XXE（XML External Entity，XML 外部实体注入）
 ##  产生原因
@@ -202,7 +213,7 @@ XML 文档结构包括 XML 声明、文档类型定义（DTD，Document Type Def
 
 ##  靶场演示
 ```
-php源码地址：./xxe/xxe_1.php
+php源码地址：/app/vul/xxe/xxe_1.php
 // 读取本地文件
 通过 file:// 可以读取本地文件，造成敏感文件泄露：
 // 检测
