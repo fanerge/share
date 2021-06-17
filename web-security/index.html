@@ -1,11 +1,12 @@
-<p>PHP + MYSQL + Apache
-  安装 Pikachu 靶场</p>
+<h1>需要一些前置知识</h1>
 
 <p><code>
+PHP + MYSQL + Apache
+安装 Pikachu 靶场
 docker search pikachu
 docker pull area39/pikachu
 // 运行容器
-docker run -d --name=pikachu --rm -p6666:80 area39/pikachu
+docker run -d --name=pikachu --rm -p 9999:80 area39/pikachu
 -d：代表后台运行
 -t：为容器分配伪终端
 --name：命名容器
@@ -24,7 +25,7 @@ docker exec -it pikachu sh
 
 <p>XSS 漏洞，通常指的是网站对用户输入数据未做有效过滤，攻击者可以将恶意脚本注入网站页面中，达到执行恶意代码的目的。</p>
 
-<h2>分类</h2>
+<h2>靶场演示</h2>
 
 <p>一般将 XSS：反射型、存储型、DOM 型。</p>
 
@@ -69,28 +70,28 @@ javascript:alert(1)
 
 <h3>编码层预防</h3>
 
-<ol>
-  <li>
-    输入检查，白名单限制用户输入，&lt;script&gt;、javascript:、&lt;、&gt;、&#39;、&quot;、&amp;、#，一定不要单纯只在客户端上做过滤，还要结合服务端做限制。若只是客户端上做过滤，那么抓包后修改数据重发就绕过了。
-  </li>
-  <li>输出检查</li>
-  <li>innerHTML（textContent）、href、src、element.setAttribute、element.style.backgroundImage、</li>
-  <li>Httponly Cookie</li>
-  <li>Content Security Policy</li>
-</ol>
+<p><code>
+1.  输入检查，白名单限制用户输入，&lt;script&gt;、javascript:、&lt;、&gt;、&#39;、&quot;、&amp;、#，一定不要单纯只在客户端上做过滤，还要结合服务端做限制。若只是客户端上做过滤，那么抓包后修改数据重发就绕过了。
+2.  输出检查
+3.  innerHTML（textContent）、href、src、element.setAttribute、element.style.backgroundImage、
+4.  Httponly Cookie
+5.  Content Security Policy
+</code></p>
+
+<p><a href="https://portswigger.net/web-security/cross-site-scripting/cheat-sheet">XSS cheat sheet</a></p>
 
 <h1>SQL 注入</h1>
 
 <h2>原因</h2>
 
-<p>开发时未对用户的输入数据（可能是 GET 或 POST 参数，也可能是 Cookie、HTTP 头等）进行有效过滤，直接带入 SQL 语句解析，使得原本应为参数数据的内容，却被用来拼接 SQL 语句做解析。
+<p>开发时未对用户的输入数据（可能是 GET 或 POST 参数，也可能是 Cookie、HTTP 头等）进行有效过滤，直接带入 SQL 语句解析，使得原本应为参数数据的内容，却被用来拼接 SQL
+  语句做解析（一句话解释，错误的将数据当代码解析，最终导致 SQL 注入漏洞的产生。）。
   十几年前，有个号称有可登录任意网站管理后台的万能密码，只要在用户名和密码中均输入 &#39;or&#39;1&#39;=&#39;1（注意单引号的使用）即可登录后台。
-  <code></code>`
-  SELECT username, password FROM users WHERE username=&#39;&#39;&#39; and password=&#39;&#39; LIMIT 0,1
-  SELECT username, password FROM users WHERE username=&#39;admin&#39;or&#39;1&#39;=&#39;1&#39; and
-  password=&#39;&#39;or&#39;1&#39;=&#39;1&#39; LIMIT 0,1</p>
-
-<p><code></code>`</p>
+  <code>
+SELECT username, password FROM users WHERE username=&#39;$uname&#39; and password=&#39;$passwd&#39; LIMIT 0,1
+SELECT username, password FROM users WHERE username=&#39;admin&#39;or&#39;1&#39;=&#39;1&#39; and password=&#39;&#39;or&#39;1&#39;=&#39;1&#39; LIMIT 0,1
+// $uname 为 admin&#39;or&#39;1&#39;=&#39;1；password 为 &#39;or&#39;1&#39;=&#39;1
+</code></p>
 
 <h2>举例</h2>
 
@@ -98,7 +99,8 @@ javascript:alert(1)
 
 <p>注入的参数为整数时就是数字型注入，或者叫整数型注入。
   <code>
-SELECT * FROM table WHERE id=1
+SELECT * FROM table WHERE id=2
+SELECT * FROM table WHERE id=1+1
 </code>
   此处 id 参数为整数，两边无引号。测试时可以使用 1+1 和 3-1 这种计算结果相同的参数值去构造请示，对比响应结果是否一致，如果相同就可能在数字型注入。</p>
 
@@ -113,6 +115,14 @@ SELECT * FROM table WHERE id=1
 <h3>二次注入</h3>
 
 <p>有可能第一次带入参数时做了安全转义，但开发人员在二次使用时并没有做转义，导致第二次使用时才产生注入，这就是二次注入。</p>
+
+<h2>靶场演示</h2>
+
+<p><code>
+以搜索型注入为例
+php源码分析：/app/vul/sqli/sqli_search.php
+ $query=&quot;select username,id,email from member where username like &#39;%$name%&#39;&quot;;
+</code></p>
 
 <h2>预防</h2>
 
@@ -132,6 +142,18 @@ SELECT * FROM table WHERE id=1
 
 <p>由于未校验请求来源，导致攻击者可在第三方站点发起 HTTP 请求，并以受害者的目标网站登录态（cookie、session 等）请求，从而执行一些敏感的业务功能操作，比如更改密码、修改个人资料、关注好友。</p>
 
+<h2>靶场演示</h2>
+
+<p><code>
+php源码地址：/app/vul/csrf/csrfget/csrf_get_edit.php
+CSRF（get）为列
+修改用户信息请求：http://localhost:9999/vul/csrf/csrfget/csrf_get_edit.php?sex=12&amp;phonenum=12&amp;add=12&amp;email=12&amp;submit=submit
+身份cookie
+Cookie: PHPSESSID=bvrp622ugf4retneht933o14bj
+// 带token（比较安全）
+// /app/vul/csrf/csrftoken/token_get_edit.php
+</code></p>
+
 <h2>预防</h2>
 
 <ol>
@@ -141,7 +163,7 @@ SELECT * FROM table WHERE id=1
 </ol>
 
 <p><code></code>`
-  // 提交的表单中，添加一个隐藏的 Token，其值必须是保证1.服务端提供 2.不可预测的随机数。
+  // 提交的表单中，添加一个隐藏的 Token，其值必须是保证 1.服务端提供 2.不可预测的随机数。
   &lt;input type = &quot;hidden&quot; value=&quot;afcsjkl82389dsafcjfsaf352daa34df&quot; name=&quot;token&quot; &gt;</p>
 
 <p><code></code>`</p>
@@ -159,31 +181,19 @@ SELECT * FROM table WHERE id=1
 
 <p>攻击者向服务端发送包含恶意 URL 链接的请求，借由服务端去访问此 URL ，以获取受保护网络内的资源的一种安全漏洞。SSRF 常被用于探测攻击者无法访问到的网络区域，比如服务器所在的内网，或是受防火墙访问限制的主机。</p>
 
-<p><code></code>`
-  // 假设只有内网可以访问到 https://www.baidu.com
-  http://localhost:9999/vul/ssrf/ssrf_curl.php?url=https://www.baidu.com</p>
-
-<p>// 查看 php 源码分析
-  if(isset($<em>GET[&#39;url&#39;]) &amp;&amp; $</em>GET[&#39;url&#39;] != null){</p>
-
-<pre><code>//接收前端 URL 没问题,但是要做好过滤,如果不做过滤,就会导致 SSRF
-$URL = $_GET[&#39;url&#39;];
-$CH = curl_init($URL);
-curl_setopt($CH, CURLOPT_HEADER, FALSE);
-curl_setopt($CH, CURLOPT_SSL_VERIFYPEER, FALSE);
-$RES = curl_exec($CH);
-curl_close($CH) ;</code></pre>
-
-<p>//ssrf 的问题是:前端传进来的 url 被后台使用 curl_exec()进行了请求,然后将请求的结果又返回给了前端
-  //除了 http/https 外,curl 还支持一些其他的协议 curl --version 可以查看其支持的协议,telnet
-  //curl 支持很多协议，有 FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE 以及 LDAP
-  echo $RES;
-  }
-  <code></code>`</p>
+<h2>靶场演示</h2>
 
 <p><code></code>`
-  // 用户账户的详细信息
-  http://localhost:9999/vul/ssrf/ssrf_curl.php?url=file:///etc/passwd</p>
+  php源码：/app/vul/ssrf/ssrf<em>curl.php
+    // 假设只有内网可以访问到 https://www.baidu.com
+    http://localhost:9999/vul/ssrf/ssrf</em>curl.php?url=https://www.baidu.com
+  //ssrf 的问题是:前端传进来的 url 被后台使用 curl<em>exec()进行了请求,然后将请求的结果又返回给了前端
+    //除了 http/https 外,curl 还支持一些其他的协议 curl --version 可以查看其支持的协议,telnet
+    //curl 支持很多协议，有 FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE 以及 LDAP
+    echo $RES;
+    }
+    // 利用file://用户账户的详细信息
+    http://localhost:9999/vul/ssrf/ssrf</em>curl.php?url=file:///etc/passwd</p>
 
 <p><code></code>`</p>
 
@@ -205,9 +215,21 @@ curl_close($CH) ;</code></pre>
 <ol>
   <li>采用白名单限制，只允许访问特定的 IP 或域名，比如只允许访问 tabe 域名 *.tabe.cn；</li>
   <li>限制内网 IP 访问，常见的内网 IP 段有 10.0.0.0 - 10.255.255.255、172.16.0.0 - 172.31.255.255、192.168.0.0 - 192.168.255.255；</li>
-  <li>禁用一些不必要的协议，比如 file://、gopher://(常用于攻击内网ftp、redis、telnet、smtp等服务)、dict://(常用于刺探端口)。</li>
+  <li>禁用一些不必要的协议，比如 file://、dict://(常用于刺探端口)。</li>
   <li>另外关闭错误回显、关闭高危端口、及时修复漏洞，哪怕它是处于内网环境，都有助于缓解 SSRF 漏洞的进一步利用。</li>
 </ol>
+
+<h2>dict（介绍）</h2>
+
+<p><code></code>`
+  DICT协议,一个字典服务器协议,A Dictionary Server Protocol
+  使用：dict://serverip:port/命令:参数
+  向服务器的端口请求为【命令:参数】读取 redis 的变量
+  curl dict://192.168.0.67:6379/get:name
+  curl 支持的通信协议有FTP、FTPS、HTTP、HTTPS、TFTP、SFTP、Gopher、SCP、Telnet、DICT、FILE、LDAP、LDAPS、IMAP、POP3、SMTP和RTSP。</p>
+
+<p><code></code>`
+  <a href="https://www.cnblogs.com/Zh1z3ven/p/14214208.html">SSRF之利用dict和gopher吊打Redis</a></p>
 
 <h1>XXE（XML External Entity，XML 外部实体注入）</h1>
 
@@ -215,11 +237,33 @@ curl_close($CH) ;</code></pre>
 
 <p>XXE（XML External Entity，XML 外部实体注入）正是当允许引用外部实体时，通过构造恶意内容，导致读取任意文件、执行系统命令、内网探测与攻击等危害的一类漏洞。</p>
 
-<h2>攻击手段</h2>
+<h2>XML 文档结构</h2>
 
-<p>// 读取本地文件
-  通过 file:// 可以读取本地文件，造成敏感文件泄露：
+<p>XML 文档结构包括 XML 声明、文档类型定义（DTD，Document Type Definition）、文档元素。
   <code>
+&lt;!--XML声明--&gt;
+&lt;?xml version=&quot;1.0&quot;?&gt; 
+&lt;!--文档类型定义--&gt;
+&lt;!DOCTYPE people [  &lt;!--定义此文档是 people 类型的文档--&gt;
+  &lt;!ELEMENT people (name,age,mail)&gt;  &lt;!--定义people元素有3个元素--&gt;
+  &lt;!ELEMENT name (#PCDATA)&gt;     &lt;!--定义name元素为“#PCDATA”类型--&gt;
+  &lt;!ELEMENT age (#PCDATA)&gt;   &lt;!--定义age元素为“#PCDATA”类型--&gt;
+  &lt;!ELEMENT mail (#PCDATA)&gt;   &lt;!--定义mail元素为“#PCDATA”类型--&gt;
+]]]&gt;
+&lt;!--文档元素--&gt;
+&lt;people&gt;
+  &lt;name&gt;john&lt;/name&gt;
+  &lt;age&gt;18&lt;/age&gt;
+  &lt;mail&gt;john@qq.com&lt;/mail&gt;
+&lt;/people&gt;
+</code></p>
+
+<h2>靶场演示</h2>
+
+<p><code>
+php源码地址：/app/vul/xxe/xxe_1.php
+// 读取本地文件
+通过 file:// 可以读取本地文件，造成敏感文件泄露：
 // 检测
 &lt;!DOCTYPE foo [&lt;!ELEMENT foo ANY&gt;
     &lt;!ENTITY xxe SYSTEM &quot;file:///etc/passwd&quot;&gt;
@@ -236,7 +280,7 @@ curl_close($CH) ;</code></pre>
 
 <h2>预防</h2>
 
-<p><a href="XXEinjector">XXE 漏洞利用工具-XXEinjector</a></p>
+<p><a href="https://github.com/enjoiz/XXEinjector">XXE 漏洞利用工具-XXEinjector</a></p>
 
 <p>要防御 XXE 也比较简单，关闭外部实体引用即可。
   比如在 Java 中常用于解析 XML 的 DocumentBuilderFactory，就可以通过 setFeature 方法防御 XXE 漏洞
@@ -288,6 +332,48 @@ dbf.setExpandEntityReferences(false);</code></pre>
 <p>当传给 unserialize() 的参数由外部可控时，若攻击者通过传入一个精心构造的序列化字符串，从而控制对象内部的变量甚至是函数，比如 PHP
   中特殊的魔术方法，这些方法在某些情况下会被自动调用，为实现任意代码执行提供了条件，这时反序列化漏洞就产生了。有点懵，我们看靶场中实例吧。</p>
 
+<h2>靶场演示</h2>
+
+<p><code></code>`
+  php源码：/app/vul/unserilization/unser.php
+  $str = O:1:&quot;S&quot;:1:{s:4:&quot;test&quot;;s:29:&quot;&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;&quot;;}
+  $u = unserialize($str);</p>
+
+<p>// 解释
+  a - array 数组型
+  b - boolean 布尔型
+  d - double 浮点型
+  i - integer 整数型
+  o - common object 共同对象
+  r - objec reference 对象引用
+  s - non-escaped binary string 非转义的二进制字符串
+  S - escaped binary string 转义的二进制字符串
+  C - custom object 自定义对象
+  O - class 对象
+  N - null 空
+  R - pointer reference 指针引用
+  U - unicode string Unicode 编码的字符串</p>
+
+<p>// php魔术方法
+  // 魔术方法就是 PHP 中一些在某些情况下会被自动调用的方法，无须手工调用，比如当一个对象创建时 <strong>construct 会被调用，当一个对象销毁时 </strong>destruct 会被调用。
+  <strong>construct() #类的构造函数
+  </strong>destruct() #类的析构函数
+  <strong>call() #在对象中调用一个不可访问方法时调用
+  </strong>callStatic() #用静态方式中调用一个不可访问方法时调用
+  <strong>get() #获得一个类的成员变量时调用
+  </strong>set() #设置一个类的成员变量时调用
+  <strong>isset() #当对不可访问属性调用isset()或empty()时调用
+  </strong>unset() #当对不可访问属性调用unset()时被调用。
+  <strong>sleep() #执行serialize()时，先会调用这个函数
+  </strong>wakeup() #执行unserialize()时，先会调用这个函数
+  <strong>toString() #类被当成字符串时的回应方法
+  </strong>invoke() #调用函数的方式调用一个对象时的回应方法
+  <strong>set<em>state() #调用var</em>export()导出类时，此静态方法会被调用。
+  </strong>clone() #当对象复制完成时调用
+  <strong>autoload() #尝试加载未定义的类
+  </strong>debugInfo() #打印所需调试信息
+  <code></code>`</p>
+
 <h2>防御反序列化漏洞</h2>
 
 <ol>
@@ -305,12 +391,6 @@ dbf.setExpandEntityReferences(false);</code></pre>
 <p>文件上传漏洞正是在文件上传功能中，由于对用户上传的文件数据未做有效检测或过滤不严，导致上传的恶意文件被服务端解释器解析执行，利用漏洞可获取系统控制权。
   若服务器支持某种语言的解析执行，比如上传了 ASP、JSP、ASPX 等文件对应代码执行。</p>
 
-<p><code>
-// client check
-upload a.php remove event listener
-http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
-</code></p>
-
 <h2>绕过上传限制</h2>
 
 <h3>禁用 JS</h3>
@@ -325,14 +405,6 @@ http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
 
 <p>不同文件格式有不同的文件头</p>
 
-<h3>%00 截断</h3>
-
-<p>如果限制不当，仍有可能绕过。比如对文件后缀、路径上的检测，有时可通过添加 ％00 截断来绕过</p>
-
-<p><code>
-upload.php?type=image&amp;file=shell.php%00.jpg
-</code></p>
-
 <h3>大小写绕过</h3>
 
 <p>有时检测未区分文件名大小写时，可使用此方法绕过。</p>
@@ -344,6 +416,15 @@ upload.php?type=image&amp;file=shell.php%00.jpg
 php - php\php2\php3\pht
 asp - asp\asa\cer\cdx
 jsp - jsp\jspx\jspf
+</code></p>
+
+<h2>靶场演示</h2>
+
+<p><code>
+以 client check为例
+移除 checkFileExt 文件限制函数
+上传a.php文件
+访问http://localhost:9999/vul/unsafeupload/uploads/a.php?name=fanerge
 </code></p>
 
 <h3>预防</h3>
@@ -372,12 +453,12 @@ location ~* ^/uploads/.*\.(php|php5)$
 
 <h2>命令注入漏洞成因</h2>
 
-<p>命令注入，主要指应用在服务器或客户端上，允许拼接系统命令并执行而造成的漏洞。对于 web 网站，通常是针对服务器的攻击利用。
+<p>服务端直接将接受到的数据传入到系统命令执行函数去执行（没有验证参数）。
   <code>
 PHP 中常见的系统命令执行函数有：
 system()
 exec()
-shell_ exec()
+shell_exec()
 proc_open()
 ...
 </code>
@@ -393,10 +474,10 @@ proc_open()
 命令格式：cmd1 | cmd2，cmd1 的执行结果传递给 cmd2 去执行。
 ||
 命令格式：cmd1 || cmd2，cmd1 执行失败后就执行 cmd2。
-&amp;
-命令格式：cmd1 &amp; cmd2，&amp; 用于分隔多个命令，命令按顺序 cmd1、cmd2 执行。
 ;
 命令格式：cmd1 ; cmd2，分号用于分隔多个命令去执行，命令按顺序 cmd1、cmd2 执行。
+&amp;
+命令格式：cmd1 &amp; cmd2，&amp; 用于分隔多个命令，命令按顺序 cmd1、cmd2 执行。
 ``
 命令格式：cmd，注意这里是对反斜号，代表命令执行结果的输出，即命令替换。
 $()
@@ -409,8 +490,11 @@ $()
 
 <h2>靶场演示</h2>
 
-<p>127.0.0.1;cat /etc/passwd
-  php源码路径：/app/vul/rce</p>
+<p><code>
+以 exec &quot;ping&quot; 为例
+php源码路径：/app/vul/rce
+127.0.0.1;cat /etc/passwd
+</code></p>
 
 <h2>漏洞防御</h2>
 
@@ -444,12 +528,13 @@ $()
     因此，在web应用系统的功能设计上尽量不要让用户直接传变量给包含函数，如果非要这么做，也一定要做严格的白名单策略进行过滤。</li>
 </ol>
 
-<h2>靶场演示(本地文件包含漏洞)</h2>
+<h2>靶场演示</h2>
 
-<p>php源码：/app/vul/fileinclude/fi_local.php
-  <a
-    href="http://127.0.0.1:9999/vul/fileinclude/fi_local.php?filename=../../../../../../../../etc/passwd&amp;submit=%E6%8F%90%E4%BA%A4">构造请求</a>
-</p>
+<p><code>
+以本地文件包含漏洞为例
+php源码：/app/vul/fileinclude/fi_local.php
+http://127.0.0.1:9999/vul/fileinclude/fi_local.php?filename=../../../../../../../../etc/passwd&amp;submit=%E6%8F%90%E4%BA%A4
+</code></p>
 
 <h2>挖掘文件包含漏洞</h2>
 
@@ -468,8 +553,6 @@ $()
 </ol>
 
 <h1>越权漏洞（over permission）</h1>
-
-<p>IDOR（Insecure Direct Object Reference，不安全的对象引用）</p>
 
 <h2>越权漏洞成因</h2>
 
@@ -516,6 +599,43 @@ $()
   2. 最低权限原则：只授予执行操作所必需的最小访问权限，并且对于该访问权只准许使用所需的最少时间。
   3. 前后端双重验证：在涉及敏感操作行为时，前端与后端同时对用户输入数据进行权限校验，尤其是前端校验特别容易被改包绕过。
   4. 对于特别敏感的操作增设密码或安全问题等验证方式：比如修改密码要求输入原密码。</p>
+
+<h1>点击劫持（clickJack）</h1>
+
+<p><code>
+// 原因
+在网页中插入一个 transparent 的iframe，iframe 覆盖在定制位置，点击网页中的组件会触发 iframe 中的对应事件。
+// 防御
+1.  X-FRAME-OPTIONS: DENY 和 SAMEORIGIN，可以禁止或指定域名放入当前页面的 iframe 中。
+2.  CSP frame-src 设置允许通过类似&lt;frame&gt;和&lt;iframe&gt;标签加载的内嵌内容的源地址。
+</code></p>
+
+<h1>DDoS分布式拒绝服务攻击</h1>
+
+<p><code>
+// 原因
+分布式拒绝服务攻击可以使很多的计算机在同一时间访问同一站点或IP等，使攻击的目标无法正常使用。
+之前 GitHub 在一瞬间遭到高达 1.35Tbps 的带宽攻击。这次 DDoS 攻击几乎可以堪称是互联网有史以来规模最大、威力最大的 DDoS 攻击了。
+// 1KB = 1024B；TB &gt; GB &gt; MB &gt; KB &gt; B // 1TB=1024GB=2^40字节
+// 对我们业务有什么影响呢？
+// 大量恶意请求占用带宽，甚至导致服务器宕机无法正常使用。
+https://www.zhihu.com/question/22259175
+分类：SYN Flood、DNS Query Flood、UDP Flood、ICMP Flood
+// 这是一种利用TCP协议缺陷，发送大量伪造的TCP连接请求，从而使得被攻击方资源耗尽（CPU满负荷或内存不足）的攻击方式。建立TCP连接，需要三次握手——客户端发送SYN报文，服务端收到请求并返回报文表示接受，客户端也返回确认，完成连接。
+// 防御
+DDoS流量清洗（三方企业服务）、黑名单
+</code></p>
+
+<h1>靶场其他漏洞演示</h1>
+
+<h2>文件下载漏洞</h2>
+
+<p><code>
+// 正常下载图片
+http://localhost:9999/vul/unsafedownload/execdownload.php?filename=kb.png
+// 构造下载路径(下载源码)
+http://localhost:9999/vul/unsafedownload/execdownload.php?filename=../execdownload.php
+</code></p>
 
 <h1>如何构建安全的WEB？</h1>
 
